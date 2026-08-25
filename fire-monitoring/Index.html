@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Pantau Titik Api & Kebakaran — Real-Time</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+
+<style>
+  :root{
+    --bg:#0c1116; --panel:#141b22; --panel2:#1b232c; --border:#2a3540;
+    --text:#e8edf2; --muted:#8fa1b3; --accent:#ff5033;
+    --kecil:#ff9466; --sedang:#e5311d; --besar:#7a0c02;
+    --ok:#2fbf71; --warn:#f5a524;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{ margin:0; padding:0; height:100%; background:var(--bg); color:var(--text); overflow:hidden; }
+  #app{ position:relative; width:100vw; height:100vh; }
+  #map{ position:absolute; inset:0; background:#080c10; }
+
+  /* ---------- Top bar ---------- */
+  #topbar{
+    position:absolute; top:0; left:0; right:0; z-index:1000;
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    padding:10px 12px; background:linear-gradient(180deg, rgba(10,14,18,.92), rgba(10,14,18,.55) 80%, transparent);
+    pointer-events:none;
+  }
+  #topbar > *{ pointer-events:auto; }
+  .brand{ display:flex; align-items:center; gap:8px; font-weight:700; font-size:15px; white-space:nowrap; }
+  .brand .dot{ width:10px; height:10px; border-radius:50%; background:var(--sedang); box-shadow:0 0 10px 2px var(--sedang); animation:pulse 1.6s infinite; }
+  @keyframes pulse{ 0%{opacity:1;} 50%{opacity:.35;} 100%{opacity:1;} }
+  .ctrl-group{ display:flex; align-items:center; gap:6px; background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:5px 8px; }
+  select, .btn{
+    background:var(--panel2); color:var(--text); border:1px solid var(--border); border-radius:7px;
+    padding:6px 9px; font-size:12.5px; cursor:pointer; outline:none;
+  }
+  select:focus, .btn:focus{ border-color:var(--accent); }
+  .btn{ display:flex; align-items:center; gap:5px; font-weight:600; }
+  .btn:hover{ background:#22303c; }
+  .btn.primary{ background:var(--accent); border-color:var(--accent); color:#fff; }
+  .btn.primary:hover{ background:#e8452c; }
+  .btn.icon{ padding:6px 8px; }
+  label.small{ font-size:11px; color:var(--muted); }
+  .spacer{ flex:1; }
+
+  /* ---------- Side panel (hotspot list) ---------- */
+  #sidebar{
+    position:absolute; top:64px; right:12px; bottom:12px; width:340px; max-width:88vw;
+    background:var(--panel); border:1px solid var(--border); border-radius:14px; z-index:900;
+    display:flex; flex-direction:column; overflow:hidden; box-shadow:0 8px 30px rgba(0,0,0,.4);
+    transition:transform .25s ease;
+  }
+  #sidebar.collapsed{ transform:translateX(calc(100% + 20px)); }
+  #sidebar .hdr{ padding:12px 14px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
+  #sidebar .hdr b{ font-size:13.5px; }
+  #stats{ display:grid; grid-template-columns:repeat(4,1fr); gap:6px; padding:10px 12px; border-bottom:1px solid var(--border); }
+  .stat{ background:var(--panel2); border-radius:9px; padding:7px 6px; text-align:center; }
+  .stat .n{ font-size:16px; font-weight:800; }
+  .stat .l{ font-size:9.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.03em; }
+  .stat.besar .n{ color:var(--besar); text-shadow:0 0 6px rgba(122,12,2,.6); }
+  .stat.sedang .n{ color:var(--sedang); }
+  .stat.kecil .n{ color:var(--kecil); }
+  #list{ overflow-y:auto; flex:1; padding:6px; }
+  .item{
+    display:flex; gap:9px; padding:9px 8px; border-radius:10px; cursor:pointer; align-items:flex-start;
+    border:1px solid transparent;
+  }
+  .item:hover{ background:var(--panel2); border-color:var(--border); }
+  .sev-badge{ width:11px; height:11px; border-radius:50%; margin-top:3px; flex-shrink:0; }
+  .item .meta{ font-size:11px; color:var(--muted); line-height:1.5; }
+  .item .ttl{ font-size:12.5px; font-weight:700; }
+  #emptyList{ padding:24px 14px; color:var(--muted); font-size:12.5px; text-align:center; }
+
+  /* ---------- Legend ---------- */
+  #legend{
+    position:absolute; left:12px; bottom:12px; z-index:900; background:var(--panel);
+    border:1px solid var(--border); border-radius:12px; padding:10px 12px; font-size:11.5px; width:190px;
+  }
+  #legend h4{ margin:0 0 8px; font-size:11.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+  .leg-row{ display:flex; align-items:center; gap:8px; margin:5px 0; }
+  .leg-dot{ border-radius:50%; flex-shrink:0; }
+  .leg-txt b{ display:block; font-size:12px; }
+  .leg-txt span{ color:var(--muted); font-size:10.5px; }
+
+  /* ---------- Wind widget ---------- */
+  #wind{
+    position:absolute; left:12px; top:64px; z-index:900; background:var(--panel);
+    border:1px solid var(--border); border-radius:14px; padding:12px; width:190px;
+  }
+  #wind .hdr{ display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+  #wind .hdr b{ font-size:12px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+  #windCompass{ position:relative; width:96px; height:96px; margin:0 auto; }
+  #windCompass svg{ width:100%; height:100%; }
+  #windArrow{ transform-origin:50% 50%; transition:transform .5s ease; }
+  #windSpeed{ text-align:center; font-size:20px; font-weight:800; margin-top:6px; }
+  #windSpeed span{ font-size:11px; font-weight:500; color:var(--muted); }
+  #windMeta{ text-align:center; font-size:11px; color:var(--muted); margin-top:2px; line-height:1.5; }
+  #windAreaSel{ width:100%; margin-top:8px; }
+
+  /* ---------- Toast / status ---------- */
+  #toast{
+    position:absolute; left:50%; top:66px; transform:translateX(-50%); z-index:1200;
+    background:#3a1414; border:1px solid #742323; color:#ffd7d0; padding:9px 14px; border-radius:10px;
+    font-size:12.5px; max-width:min(560px,86vw); display:none; box-shadow:0 8px 24px rgba(0,0,0,.4);
+  }
+  #toast.show{ display:block; }
+  #toast a{ color:#fff; }
+
+  #loading{
+    position:absolute; z-index:1300; top:64px; right:362px; background:var(--panel); border:1px solid var(--border);
+    color:var(--muted); font-size:11.5px; padding:6px 10px; border-radius:8px; display:none; align-items:center; gap:6px;
+  }
+  #loading.show{ display:flex; }
+  .spin{ width:12px; height:12px; border-radius:50%; border:2px solid var(--border); border-top-color:var(--accent); animation:spin 0.8s linear infinite; }
+  @keyframes spin{ to{ transform:rotate(360deg); } }
+
+  /* ---------- Fire marker icons ---------- */
+  .fire-icon{ border-radius:50%; box-shadow:0 0 0 2px rgba(255,255,255,.25); }
+  .fire-icon.besar{ background:radial-gradient(circle, #ff3b1f 0%, var(--besar) 70%); box-shadow:0 0 14px 3px rgba(255,60,20,.75), 0 0 0 2px rgba(255,255,255,.35); animation:flicker 1.1s infinite ease-in-out; }
+  .fire-icon.sedang{ background:radial-gradient(circle, #ff6a4d 0%, var(--sedang) 75%); box-shadow:0 0 8px 2px rgba(229,49,29,.55); }
+  .fire-icon.kecil{ background:radial-gradient(circle, #ffb08a 0%, var(--kecil) 75%); box-shadow:0 0 4px 1px rgba(255,148,102,.4); }
+  @keyframes flicker{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.12); } }
+
+  .area-arrow{ transform-origin:50% 50%; }
+
+  @media (max-width:720px){
+    #sidebar{ top:auto; bottom:0; right:0; left:0; width:100%; max-width:100%; height:46vh; border-radius:16px 16px 0 0; }
+    #sidebar.collapsed{ transform:translateY(calc(100% - 46px)); }
+    #wind{ width:150px; padding:9px; }
+    #windCompass{ width:76px; height:76px; }
+    #legend{ width:150px; padding:8px 10px; }
+    #loading{ right:12px; top:110px; }
+    .brand span.sub{ display:none; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="map"></div>
+
+  <div id="topbar">
+    <div class="brand"><div class="dot"></div>PANTAU TITIK API <span class="sub" style="color:var(--muted); font-weight:500;">— Real-Time Satelit</span></div>
+
+    <div class="ctrl-group">
+      <label class="small">Rentang</label>
+      <select id="dayRange">
+        <option value="1">24 jam</option>
+        <option value="2">48 jam</option>
+        <option value="3">3 hari</option>
+        <option value="7">7 hari</option>
+      </select>
+    </div>
+
+    <div class="ctrl-group">
+      <label class="small">Area</label>
+      <select id="areaFilter"><option value="">Semua area</option></select>
+    </div>
+
+    <div class="ctrl-group">
+      <label class="small">Auto-refresh</label>
+      <select id="autoRefresh">
+        <option value="0">Nonaktif</option>
+        <option value="5">5 menit</option>
+        <option value="10" selected>10 menit</option>
+        <option value="15">15 menit</option>
+        <option value="30">30 menit</option>
+      </select>
+    </div>
+
+    <button class="btn primary icon" id="btnRefresh" title="Muat ulang sekarang">⟳ Muat Ulang</button>
+    <button class="btn icon" id="btnLocate" title="Lokasi saya">📍</button>
+    <button class="btn icon" id="btnFullscreen" title="Layar penuh">⛶</button>
+
+    <div class="spacer"></div>
+    <div class="ctrl-group" id="lastUpdatedWrap">
+      <span class="small" id="lastUpdated">Memuat data…</span>
+    </div>
+    <button class="btn icon" id="btnToggleSidebar" title="Tampilkan/sembunyikan daftar">☰</button>
+  </div>
+
+  <div id="loading"><div class="spin"></div><span>Mengambil data…</span></div>
+  <div id="toast"></div>
+
+  <div id="wind">
+    <div class="hdr"><b>Arah &amp; Kecepatan Angin</b></div>
+    <div id="windCompass">
+      <svg viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="46" fill="none" stroke="#2a3540" stroke-width="2"/>
+        <circle cx="50" cy="50" r="34" fill="none" stroke="#2a3540" stroke-width="1"/>
+        <text x="50" y="12" fill="#8fa1b3" font-size="9" text-anchor="middle">U</text>
+        <text x="91" y="53" fill="#8fa1b3" font-size="9" text-anchor="middle">T</text>
+        <text x="50" y="94" fill="#8fa1b3" font-size="9" text-anchor="middle">S</text>
+        <text x="9" y="53" fill="#8fa1b3" font-size="9" text-anchor="middle">B</text>
+        <g id="windArrow">
+          <line x1="50" y1="50" x2="50" y2="14" stroke="#ff5033" stroke-width="3.5" stroke-linecap="round"/>
+          <polygon points="50,7 44,20 56,20" fill="#ff5033"/>
+        </g>
+        <circle cx="50" cy="50" r="4" fill="#e8edf2"/>
+      </svg>
+    </div>
+    <div id="windSpeed">-- <span>km/j</span></div>
+    <div id="windMeta">Arah: -- &middot; Hembusan: -- km/j</div>
+    <select id="windAreaSel"></select>
+  </div>
+
+  <div id="legend">
+    <h4>Tingkat Kebakaran</h4>
+    <div class="leg-row"><div class="leg-dot" style="width:12px;height:12px;background:var(--besar); box-shadow:0 0 8px 2px rgba(122,12,2,.8);"></div><div class="leg-txt"><b>Terbakar Hebat</b><span>FRP &ge; 15 MW</span></div></div>
+    <div class="leg-row"><div class="leg-dot" style="width:10px;height:10px;background:var(--sedang);"></div><div class="leg-txt"><b>Terbakar Sedang</b><span>FRP 5–15 MW</span></div></div>
+    <div class="leg-row"><div class="leg-dot" style="width:8px;height:8px;background:var(--kecil);"></div><div class="leg-txt"><b>Terbakar Kecil</b><span>FRP &lt; 5 MW</span></div></div>
+    <div class="leg-row" style="margin-top:8px; border-top:1px solid var(--border); padding-top:8px;">
+      <div class="leg-dot" style="width:14px;height:14px; border:2px dashed #8fa1b3; background:transparent;"></div>
+      <div class="leg-txt"><b>Panah Angin</b><span>Arah &amp; kecepatan per wilayah</span></div>
+    </div>
+  </div>
+
+  <div id="sidebar">
+    <div class="hdr"><b>Daftar Titik Api</b><div class="spacer"></div><span class="small" id="listCount">0 titik</span></div>
+    <div id="stats">
+      <div class="stat"><div class="n" id="statTotal">0</div><div class="l">Total</div></div>
+      <div class="stat besar"><div class="n" id="statBesar">0</div><div class="l">Hebat</div></div>
+      <div class="stat sedang"><div class="n" id="statSedang">0</div><div class="l">Sedang</div></div>
+      <div class="stat kecil"><div class="n" id="statKecil">0</div><div class="l">Kecil</div></div>
+    </div>
+    <div id="list"><div id="emptyList">Belum ada data titik api.</div></div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script>
+(function(){
+  'use strict';
+
+  var CONFIG = { defaultBbox: '132.0,-4.5,136.5,0.0', areaPoints: [], hasMapKey: false };
+  var map, clusterGroup, windArrowLayers = [];
+  var allPoints = [];
+  var autoRefreshTimer = null;
+
+  var SEV_COLOR = { besar:'#7a0c02', sedang:'#e5311d', kecil:'#ff9466' };
+  var SEV_RADIUS = { besar:13, sedang:9, kecil:6 };
+  var SEV_ORDER = { besar:0, sedang:1, kecil:2 };
+
+  function initMap(){
+    map = L.map('map', { zoomControl:false, minZoom:3, maxZoom:19, worldCopyJump:true })
+      .setView([-2.6, 134.4], 9);
+
+    L.control.zoom({ position:'bottomright' }).addTo(map);
+    L.control.scale({ imperial:false, position:'bottomright' }).addTo(map);
+
+    var satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+      attribution: 'Tiles &copy; Esri — Source: Esri, Maxar, Earthstar Geographics, GIS User Community',
+      maxZoom: 19
+    }).addTo(map);
+
+    var labels = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+      attribution: 'Esri Labels', maxZoom: 19, pane:'shadowPane'
+    });
+
+    var streets = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '&copy; OpenStreetMap contributors', maxZoom: 19
+    });
+
+    var baseLayers = {
+      'Satelit': satellite,
+      'Satelit + Label': L.layerGroup([satellite, labels]),
+      'Peta Jalan': streets
+    };
+    L.control.layers(baseLayers, null, { position:'topright', collapsed:true }).addTo(map);
+
+    clusterGroup = L.markerClusterGroup({
+      maxClusterRadius: 42,
+      iconCreateFunction: function(cluster){
+        var markers = cluster.getAllChildMarkers();
+        var worst = 'kecil';
+        markers.forEach(function(m){
+          var s = m.options._severity;
+          if (SEV_ORDER[s] < SEV_ORDER[worst]) worst = s;
+        });
+        var n = markers.length;
+        var size = n < 10 ? 34 : (n < 50 ? 42 : 50);
+        return L.divIcon({
+          html: '<div style="width:'+size+'px;height:'+size+'px;border-radius:50%;display:flex;align-items:center;justify-content:center;' +
+                'background:'+SEV_COLOR[worst]+'cc;border:2px solid rgba(255,255,255,.4);color:#fff;font-weight:800;font-size:12px;' +
+                'box-shadow:0 0 12px 2px '+SEV_COLOR[worst]+'88;">'+n+'</div>',
+          className:'', iconSize:[size,size]
+        });
+      }
+    });
+    map.addLayer(clusterGroup);
+  }
+
+  function fireIcon(sev){
+    var r = SEV_RADIUS[sev]*2;
+    return L.divIcon({
+      className:'fire-icon '+sev,
+      iconSize:[r, r],
+      html:''
+    });
+  }
+
+  function renderPoints(points){
+    clusterGroup.clearLayers();
+    points.forEach(function(p){
+      var marker = L.marker([p.lat, p.lon], { icon:fireIcon(p.severity), _severity:p.severity });
+      marker.bindPopup(popupHtml_(p));
+      marker._data = p;
+      clusterGroup.addLayer(marker);
+    });
+  }
+
+  function popupHtml_(p){
+    var confTxt = (p.confidencePct===null||p.confidencePct===undefined) ? '-' : p.confidencePct + '%';
+    return '' +
+      '<div style="font-family:inherit; min-width:190px;">' +
+      '<div style="font-weight:800; font-size:13px; color:'+SEV_COLOR[p.severity]+';">'+p.severityLabel+'</div>' +
+      '<div style="font-size:12px; margin-top:4px; line-height:1.6;">' +
+      '<b>Area:</b> '+esc_(p.area)+' ('+(p.areaDistanceKm!==null?p.areaDistanceKm+' km':'-')+')<br>' +
+      '<b>Koordinat:</b> '+p.lat.toFixed(4)+', '+p.lon.toFixed(4)+'<br>' +
+      '<b>FRP:</b> '+p.frp.toFixed(1)+' MW<br>' +
+      '<b>Keyakinan:</b> '+confTxt+'<br>' +
+      '<b>Terdeteksi:</b> '+esc_(p.acqDate)+' '+esc_(p.acqTime)+' ('+esc_(p.dayNight)+')<br>' +
+      '<b>Satelit:</b> '+esc_(p.satellite)+'</div></div>';
+  }
+
+  function esc_(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+
+  function updateStatsAndList(points){
+    var besar=0, sedang=0, kecil=0;
+    points.forEach(function(p){ if(p.severity==='besar')besar++; else if(p.severity==='sedang')sedang++; else kecil++; });
+    document.getElementById('statTotal').textContent = points.length;
+    document.getElementById('statBesar').textContent = besar;
+    document.getElementById('statSedang').textContent = sedang;
+    document.getElementById('statKecil').textContent = kecil;
+    document.getElementById('listCount').textContent = points.length + ' titik';
+
+    var sorted = points.slice().sort(function(a,b){
+      var d = SEV_ORDER[a.severity]-SEV_ORDER[b.severity];
+      if (d!==0) return d;
+      return b.frp - a.frp;
+    }).slice(0, 300);
+
+    var listEl = document.getElementById('list');
+    listEl.innerHTML = '';
+    if (!sorted.length){
+      listEl.innerHTML = '<div id="emptyList">Tidak ada titik api pada rentang/filter ini.</div>';
+      return;
+    }
+    sorted.forEach(function(p){
+      var el = document.createElement('div');
+      el.className='item';
+      el.innerHTML = '<div class="sev-badge" style="background:'+SEV_COLOR[p.severity]+'; box-shadow:0 0 6px 1px '+SEV_COLOR[p.severity]+'99;"></div>' +
+        '<div><div class="ttl">'+esc_(p.area)+' &middot; '+p.severityLabel+'</div>' +
+        '<div class="meta">FRP '+p.frp.toFixed(1)+' MW &middot; keyakinan '+(p.confidencePct!==null?p.confidencePct+'%':'-')+'<br>'+esc_(p.acqDate)+' '+esc_(p.acqTime)+'</div></div>';
+      el.addEventListener('click', function(){
+        map.setView([p.lat, p.lon], Math.max(map.getZoom(), 12));
+      });
+      listEl.appendChild(el);
+    });
+  }
+
+  function populateAreaFilter(){
+    var sel = document.getElementById('areaFilter');
+    var windSel = document.getElementById('windAreaSel');
+    CONFIG.areaPoints.forEach(function(a){
+      var o1 = document.createElement('option'); o1.value=a.name; o1.textContent=a.name; sel.appendChild(o1);
+      var o2 = document.createElement('option'); o2.value=a.name; o2.textContent=a.name; windSel.appendChild(o2);
+    });
+  }
+
+  function applyFilter(){
+    var areaSel = document.getElementById('areaFilter').value;
+    var filtered = areaSel ? allPoints.filter(function(p){ return p.area===areaSel; }) : allPoints;
+    renderPoints(filtered);
+    updateStatsAndList(filtered);
+  }
+
+  function showToast(msg){
+    var t = document.getElementById('toast');
+    t.innerHTML = msg;
+    t.classList.add('show');
+  }
+  function hideToast(){ document.getElementById('toast').classList.remove('show'); }
+  function setLoading(on){ document.getElementById('loading').classList[on?'add':'remove']('show'); }
+
+  function loadHotspots(){
+    setLoading(true);
+    hideToast();
+    var dayRange = parseInt(document.getElementById('dayRange').value, 10);
+    google.script.run
+      .withSuccessHandler(function(res){
+        setLoading(false);
+        if (res && res.error){
+          showToast('⚠️ '+esc_(res.error));
+          return;
+        }
+        allPoints = (res && res.points) || [];
+        applyFilter();
+        var d = new Date(res.generatedAt);
+        document.getElementById('lastUpdated').textContent = 'Diperbarui: ' + d.toLocaleString('id-ID');
+        if (res.warnings && res.warnings.length){
+          showToast('Sebagian sumber gagal dimuat: ' + res.warnings.map(esc_).join('; '));
+        }
+      })
+      .withFailureHandler(function(err){
+        setLoading(false);
+        showToast('⚠️ Gagal memuat data titik api: ' + esc_(err && err.message ? err.message : err));
+      })
+      .getHotspots({ bbox: CONFIG.defaultBbox, dayRange: dayRange });
+  }
+
+  function drawWindArrows(list){
+    windArrowLayers.forEach(function(l){ map.removeLayer(l); });
+    windArrowLayers = [];
+    list.forEach(function(w){
+      if (w.error || w.directionDeg===undefined || w.directionDeg===null) return;
+      var icon = L.divIcon({
+        className:'',
+        iconSize:[26,26],
+        html:'<div class="area-arrow" style="transform:rotate('+w.directionDeg+'deg); width:26px; height:26px; display:flex; align-items:center; justify-content:center;">' +
+             '<svg width="22" height="22" viewBox="0 0 24 24"><path d="M12 2 L18 14 L12 10.5 L6 14 Z" fill="#7fd4ff" stroke="#0c1116" stroke-width="1"/></svg></div>'
+      });
+      var m = L.marker([w.lat, w.lon], { icon:icon, interactive:true, zIndexOffset:-100 });
+      m.bindTooltip(esc_(w.name)+': '+ (w.speedKmh!=null?w.speedKmh.toFixed(0):'-') +' km/j dari '+esc_(w.directionLabel), {direction:'top'});
+      m.addTo(map);
+      windArrowLayers.push(m);
+    });
+  }
+
+  function updateWindWidget(w){
+    if (!w || w.error){
+      document.getElementById('windMeta').textContent = 'Data angin tidak tersedia';
+      return;
+    }
+    document.getElementById('windArrow').setAttribute('transform', 'rotate('+w.directionDeg+' 50 50)');
+    document.getElementById('windSpeed').innerHTML = (w.speedKmh!=null?w.speedKmh.toFixed(1):'--') + ' <span>km/j</span>';
+    document.getElementById('windMeta').textContent = 'Arah: ' + (w.directionLabel||'-') + ' (' + (w.directionDeg!=null?Math.round(w.directionDeg)+'°':'-') + ') · Hembusan: ' + (w.gustKmh!=null?w.gustKmh.toFixed(0):'-') + ' km/j';
+  }
+
+  function loadWind(){
+    var selName = document.getElementById('windAreaSel').value;
+    var area = CONFIG.areaPoints.find(function(a){ return a.name===selName; }) || CONFIG.areaPoints[0];
+    if (!area) return;
+    google.script.run
+      .withSuccessHandler(updateWindWidget)
+      .withFailureHandler(function(){ updateWindWidget(null); })
+      .getWind({ lat:area.lat, lon:area.lon });
+
+    google.script.run
+      .withSuccessHandler(drawWindArrows)
+      .withFailureHandler(function(){})
+      .getWindForAreas(CONFIG.areaPoints);
+  }
+
+  function setupAutoRefresh(){
+    if (autoRefreshTimer) clearInterval(autoRefreshTimer);
+    var mins = parseInt(document.getElementById('autoRefresh').value, 10);
+    if (mins > 0){
+      autoRefreshTimer = setInterval(function(){ loadHotspots(); loadWind(); }, mins*60*1000);
+    }
+  }
+
+  function wireEvents(){
+    document.getElementById('btnRefresh').addEventListener('click', function(){ loadHotspots(); loadWind(); });
+    document.getElementById('dayRange').addEventListener('change', loadHotspots);
+    document.getElementById('areaFilter').addEventListener('change', applyFilter);
+    document.getElementById('windAreaSel').addEventListener('change', loadWind);
+    document.getElementById('autoRefresh').addEventListener('change', setupAutoRefresh);
+    document.getElementById('btnToggleSidebar').addEventListener('click', function(){
+      document.getElementById('sidebar').classList.toggle('collapsed');
+    });
+    document.getElementById('btnFullscreen').addEventListener('click', function(){
+      var el = document.documentElement;
+      if (!document.fullscreenElement){ (el.requestFullscreen||function(){})(); }
+      else { (document.exitFullscreen||function(){})(); }
+    });
+    document.getElementById('btnLocate').addEventListener('click', function(){
+      if (!navigator.geolocation){ showToast('Geolocation tidak didukung browser ini.'); return; }
+      navigator.geolocation.getCurrentPosition(function(pos){
+        map.setView([pos.coords.latitude, pos.coords.longitude], 12);
+        L.marker([pos.coords.latitude, pos.coords.longitude]).addTo(map).bindPopup('Lokasi Anda').openPopup();
+      }, function(){ showToast('Tidak bisa mengambil lokasi Anda.'); });
+    });
+  }
+
+  function boot(cfg){
+    CONFIG = cfg || CONFIG;
+    if (!CONFIG.areaPoints || !CONFIG.areaPoints.length){
+      CONFIG.areaPoints = [{name:'Wasior', lat:-2.7167, lon:134.5}];
+    }
+    initMap();
+    populateAreaFilter();
+    wireEvents();
+    if (!CONFIG.hasMapKey){
+      showToast('⚠️ FIRMS_MAP_KEY belum diatur di Script Properties. Daftar gratis di <a href="https://firms.modaps.eosdis.nasa.gov/api/map_key/" target="_blank" rel="noopener">firms.modaps.eosdis.nasa.gov</a>, lalu tambahkan di Project Settings Apps Script.');
+    }
+    loadHotspots();
+    loadWind();
+    setupAutoRefresh();
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    google.script.run.withSuccessHandler(boot).withFailureHandler(function(){ boot(CONFIG); }).getConfig();
+  });
+})();
+</script>
+</body>
+</html>
