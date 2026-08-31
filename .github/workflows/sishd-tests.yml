@@ -1,7 +1,11 @@
 name: SISHD Tests
 
 on:
+  # Hanya main yang dijalankan lewat push; branch lain sudah tercakup oleh event pull_request,
+  # supaya satu push ke branch PR tidak memicu dua run yang identik.
   push:
+    branches:
+      - main
     paths:
       - 'sishd/**'
       - '.github/workflows/sishd-tests.yml'
