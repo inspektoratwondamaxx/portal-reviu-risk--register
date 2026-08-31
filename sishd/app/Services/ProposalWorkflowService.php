@@ -78,49 +78,79 @@ class ProposalWorkflowService
         });
     }
 
-    public function review(Proposal $proposal, User $reviewer, string $keputusan, ?string $catatan = null, string $tahapan = 'verifikator'): Proposal
+    /**
+     * Approval berjenjang (Bab 22.3 kajian): "setuju" pada tahap yang belum terakhir hanya
+     * memajukan proposal ke tahap berikutnya (tetap menunggu_verifikasi, tidak materialize).
+     * Data master baru dibuat/diubah setelah tahap TERAKHIR (pejabat_berwenang) menyetujui.
+     * Tahap diambil dari proposal->tahapan_saat_ini, bukan dari input caller, supaya seorang
+     * reviewer tidak bisa "melompat" ke tahap yang bukan gilirannya lewat parameter yang salah.
+     */
+    public function review(Proposal $proposal, User $reviewer, string $keputusan, ?string $catatan = null): Proposal
     {
         if (! in_array($keputusan, ['setuju', 'revisi', 'tolak'], true)) {
             throw new InvalidArgumentException("Keputusan tidak valid: {$keputusan}");
         }
 
-        return DB::transaction(function () use ($proposal, $reviewer, $keputusan, $catatan, $tahapan) {
+        return DB::transaction(function () use ($proposal, $reviewer, $keputusan, $catatan) {
+            $tahapanSaatIni = $proposal->tahapan_saat_ini;
+
             ProposalReview::create([
                 'proposal_id' => $proposal->id,
                 'reviewer_id' => $reviewer->id,
-                'tahapan' => $tahapan,
+                'tahapan' => $tahapanSaatIni,
                 'keputusan' => $keputusan,
                 'catatan' => $catatan,
                 'reviewed_at' => now(),
             ]);
 
-            $status = match ($keputusan) {
-                'setuju' => ProposalStatus::Disetujui,
-                'revisi' => ProposalStatus::Revisi,
-                'tolak' => ProposalStatus::Ditolak,
-            };
+            if ($keputusan !== 'setuju') {
+                $proposal->forceFill([
+                    'status' => $keputusan === 'tolak' ? ProposalStatus::Ditolak : ProposalStatus::Revisi,
+                    'catatan_verifikasi' => $catatan,
+                    'verifikator_id' => $reviewer->id,
+                    'verified_at' => now(),
+                ])->save();
 
-            $proposal->forceFill([
-                'status' => $status,
-                'catatan_verifikasi' => $catatan,
-                'verifikator_id' => $reviewer->id,
-                'verified_at' => now(),
-            ])->save();
+                return $proposal->refresh();
+            }
 
-            if ($keputusan === 'setuju') {
+            $tahapanBerikutnya = Proposal::nextTahapan($tahapanSaatIni);
+
+            if ($tahapanBerikutnya === null) {
+                $proposal->forceFill([
+                    'status' => ProposalStatus::Disetujui,
+                    'catatan_verifikasi' => $catatan,
+                    'verifikator_id' => $reviewer->id,
+                    'verified_at' => now(),
+                ])->save();
+
                 foreach ($proposal->items as $item) {
                     $this->materialize($proposal, $item);
                 }
+            } else {
+                $proposal->forceFill([
+                    'tahapan_saat_ini' => $tahapanBerikutnya,
+                    'status' => ProposalStatus::MenungguVerifikasi,
+                    'catatan_verifikasi' => $catatan,
+                ])->save();
             }
 
             return $proposal->refresh();
         });
     }
 
-    /** OPD mengajukan ulang usulan yang diminta revisi (Bab 11 kajian: DIAJUKAN -> DITOLAK -> PERBAIKAN -> DIAJUKAN). */
+    /**
+     * OPD mengajukan ulang usulan yang diminta revisi (Bab 11 kajian: DIAJUKAN -> DITOLAK -> PERBAIKAN
+     * -> DIAJUKAN). Rantai approval dimulai lagi dari tahap pertama, bukan melanjutkan dari tahap
+     * yang meminta revisi — reviewer sebelumnya (kalau ada) perlu melihat ulang data yang diperbaiki.
+     */
     public function resubmit(Proposal $proposal): Proposal
     {
-        $proposal->forceFill(['status' => ProposalStatus::MenungguVerifikasi, 'diajukan_at' => now()])->save();
+        $proposal->forceFill([
+            'status' => ProposalStatus::MenungguVerifikasi,
+            'tahapan_saat_ini' => Proposal::TAHAPAN_URUTAN[0],
+            'diajukan_at' => now(),
+        ])->save();
 
         return $proposal->refresh();
     }

@@ -103,8 +103,8 @@ Route::middleware('auth')->group(function () {
         Route::post('/{proposal}/ajukan-ulang', [ProposalController::class, 'ajukanUlang'])->name('ajukan-ulang');
     });
 
-    // VERIFIKASI USULAN — Verifikator.
-    Route::prefix('verifikasi')->name('verifikasi.')->middleware('role:super_admin,verifikator')->group(function () {
+    // VERIFIKASI USULAN — approval berjenjang: Verifikator, Tim Standar Harga, Pejabat Berwenang.
+    Route::prefix('verifikasi')->name('verifikasi.')->middleware('role:super_admin,verifikator,tim_standar_harga,pejabat_berwenang')->group(function () {
         Route::get('/', [ProposalReviewController::class, 'index'])->name('index');
         Route::get('/{proposal}', [ProposalReviewController::class, 'show'])->name('show');
         Route::post('/{proposal}/putuskan', [ProposalReviewController::class, 'putuskan'])->name('putuskan');
@@ -129,8 +129,8 @@ Route::middleware('auth')->group(function () {
         Route::get('/download/{export}', [ImportExportController::class, 'download'])->name('download');
     });
 
-    // LAPORAN — Super Admin, Admin SSH, Admin HSPK/ASB, Verifikator.
-    Route::prefix('laporan')->name('laporan.')->middleware('role:super_admin,admin_ssh,admin_hspk_asb,verifikator')->group(function () {
+    // LAPORAN — Super Admin, Admin SSH, Admin HSPK/ASB, dan seluruh tahap approval berjenjang.
+    Route::prefix('laporan')->name('laporan.')->middleware('role:super_admin,admin_ssh,admin_hspk_asb,verifikator,tim_standar_harga,pejabat_berwenang')->group(function () {
         Route::get('/rekap/{jenis}', [LaporanController::class, 'rekap'])->name('rekap');
         Route::get('/perubahan-harga', [LaporanController::class, 'perubahanHarga'])->name('perubahan-harga');
         Route::get('/riwayat-data', [LaporanController::class, 'riwayatData'])->name('riwayat-data');

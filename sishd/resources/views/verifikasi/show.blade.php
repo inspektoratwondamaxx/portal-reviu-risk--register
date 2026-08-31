@@ -19,6 +19,20 @@
             <div class="col-md-4"><div class="text-muted small">Tanggal Usulan</div><div>{{ $proposal->diajukan_at?->format('d/m/Y H:i') }}</div></div>
             <div class="col-md-4"><div class="text-muted small">Jenis</div><div>{{ strtoupper($proposal->jenis_usulan) }} · {{ ucfirst($proposal->tipe_perubahan) }}</div></div>
         </div>
+
+        @if ($proposal->status->value === 'menunggu_verifikasi')
+            <hr>
+            <div class="text-muted small mb-2">Approval Berjenjang</div>
+            <div class="d-flex align-items-center flex-wrap gap-2">
+                @foreach (\App\Models\Proposal::TAHAPAN_URUTAN as $i => $tahap)
+                    @php $posisi = $i + 1; $sekarang = $proposal->tahapan_saat_ini === $tahap; $lewat = $posisi < $proposal->tahapanKe(); @endphp
+                    <span class="badge {{ $sekarang ? 'text-bg-warning text-dark' : ($lewat ? 'text-bg-success' : 'text-bg-light border text-muted') }}">
+                        {{ $lewat ? '✓' : $posisi }} {{ \App\Models\ProposalReview::TAHAPAN[$tahap] }}
+                    </span>
+                    @if (! $loop->last)<i class="bi bi-arrow-right text-muted"></i>@endif
+                @endforeach
+            </div>
+        @endif
     </div>
 </div>
 
@@ -78,23 +92,28 @@
         @if ($proposal->status->value === 'menunggu_verifikasi')
             <div class="card mt-3">
                 <div class="card-body">
-                    <h6 class="card-title">Catatan Verifikasi</h6>
-                    <form method="POST" action="{{ route('verifikasi.putuskan', $proposal) }}">
-                        @csrf
-                        <textarea name="catatan" class="form-control mb-3" rows="3" placeholder="Catatan untuk OPD pengusul..."></textarea>
+                    @if ($bisaMemutuskan)
+                        <h6 class="card-title">Catatan Verifikasi</h6>
+                        <form method="POST" action="{{ route('verifikasi.putuskan', $proposal) }}">
+                            @csrf
+                            <textarea name="catatan" class="form-control mb-3" rows="3" placeholder="Catatan untuk OPD pengusul..."></textarea>
 
-                        <label class="form-label">Keputusan</label>
-                        <select name="keputusan" class="form-select mb-3" required>
-                            <option value="setuju">Setuju</option>
-                            <option value="revisi">Revisi (Perbaikan)</option>
-                            <option value="tolak">Tolak</option>
-                        </select>
+                            <label class="form-label">Keputusan</label>
+                            <select name="keputusan" class="form-select mb-3" required>
+                                <option value="setuju">Setuju</option>
+                                <option value="revisi">Revisi (Perbaikan)</option>
+                                <option value="tolak">Tolak</option>
+                            </select>
 
-                        <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-primary flex-grow-1"><i class="bi bi-check2"></i> Simpan Keputusan</button>
-                            <a href="{{ route('verifikasi.index') }}" class="btn btn-outline-secondary">Kembali</a>
-                        </div>
-                    </form>
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary flex-grow-1"><i class="bi bi-check2"></i> Simpan Keputusan</button>
+                                <a href="{{ route('verifikasi.index') }}" class="btn btn-outline-secondary">Kembali</a>
+                            </div>
+                        </form>
+                    @else
+                        <p class="text-muted small mb-0"><i class="bi bi-hourglass-split"></i> Usulan ini sedang menunggu keputusan tahap <strong>{{ \App\Models\ProposalReview::TAHAPAN[$proposal->tahapan_saat_ini] ?? $proposal->tahapan_saat_ini }}</strong>, bukan tahap Anda.</p>
+                        <a href="{{ route('verifikasi.index') }}" class="btn btn-outline-secondary btn-sm mt-2">Kembali</a>
+                    @endif
                 </div>
             </div>
         @endif

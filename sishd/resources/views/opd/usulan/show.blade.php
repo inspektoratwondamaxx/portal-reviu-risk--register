@@ -11,6 +11,23 @@
     <span class="badge fs-6 {{ $proposal->status->badgeClass() }}">{{ $proposal->status->label() }}</span>
 </div>
 
+@if ($proposal->status->value === 'menunggu_verifikasi')
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="text-muted small mb-2">Approval Berjenjang</div>
+            <div class="d-flex align-items-center flex-wrap gap-2">
+                @foreach (\App\Models\Proposal::TAHAPAN_URUTAN as $i => $tahap)
+                    @php $posisi = $i + 1; $sekarang = $proposal->tahapan_saat_ini === $tahap; $lewat = $posisi < $proposal->tahapanKe(); @endphp
+                    <span class="badge {{ $sekarang ? 'text-bg-warning text-dark' : ($lewat ? 'text-bg-success' : 'text-bg-light border text-muted') }}">
+                        {{ $lewat ? '✓' : $posisi }} {{ \App\Models\ProposalReview::TAHAPAN[$tahap] }}
+                    </span>
+                    @if (! $loop->last)<i class="bi bi-arrow-right text-muted"></i>@endif
+                @endforeach
+            </div>
+        </div>
+    </div>
+@endif
+
 <div class="row g-3">
     <div class="col-lg-8">
         @foreach ($proposal->items as $item)

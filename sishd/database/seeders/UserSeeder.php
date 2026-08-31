@@ -25,6 +25,9 @@ class UserSeeder extends Seeder
             ['adminhspk@sishd.test', 'Admin HSPK/ASB', RoleName::AdminHspkAsb, null],
             ['operator@sishd.test', 'Operator Dinas PU', RoleName::OpdOperator, $dinasPu?->id],
             ['verifikator@sishd.test', 'Verifikator Standar Harga', RoleName::Verifikator, null],
+            ['timstandarharga@sishd.test', 'Tim Standar Harga', RoleName::TimStandarHarga, null],
+            ['pejabat@sishd.test', 'Pejabat Berwenang', RoleName::PejabatBerwenang, null],
+            ['pimpinan@sishd.test', 'Pimpinan', RoleName::Pimpinan, null],
         ];
 
         foreach ($accounts as [$email, $name, $roleName, $opdId]) {

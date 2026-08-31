@@ -50,7 +50,7 @@
                     <a href="{{ route('opd.usulan.index') }}" class="nav-link {{ request()->routeIs('opd.usulan.*') ? 'active' : '' }}"><i class="bi bi-file-earmark-plus me-2"></i>Usulan Saya</a>
                 @endrole
 
-                @role('super_admin', 'verifikator')
+                @role('super_admin', 'verifikator', 'tim_standar_harga', 'pejabat_berwenang')
                     <div class="nav-header">Verifikasi</div>
                     <a href="{{ route('verifikasi.index') }}" class="nav-link {{ request()->routeIs('verifikasi.*') ? 'active' : '' }}">
                         <i class="bi bi-check2-square me-2"></i>Verifikasi Usulan
@@ -70,7 +70,7 @@
                     <a href="{{ route('import-export.index') }}" class="nav-link {{ request()->routeIs('import-export.*') ? 'active' : '' }}"><i class="bi bi-arrow-down-up me-2"></i>Import / Export</a>
                 @endrole
 
-                @role('super_admin', 'admin_ssh', 'admin_hspk_asb', 'verifikator')
+                @role('super_admin', 'admin_ssh', 'admin_hspk_asb', 'verifikator', 'tim_standar_harga', 'pejabat_berwenang')
                     <div class="nav-header">Laporan</div>
                     <a href="{{ route('laporan.perubahan-harga') }}" class="nav-link {{ request()->routeIs('laporan.*') ? 'active' : '' }}"><i class="bi bi-graph-up-arrow me-2"></i>Laporan</a>
                 @endrole
