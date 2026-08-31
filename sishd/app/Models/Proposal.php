@@ -21,6 +21,17 @@ class Proposal extends Model
         'alasan_usulan', 'catatan_verifikasi', 'verifikator_id', 'diajukan_at', 'verified_at', 'created_by',
     ];
 
+    /**
+     * Default kolom `tahapan_saat_ini` juga ditulis di sini, bukan hanya di migrasi: default milik
+     * basis data tidak ikut terisi pada instance hasil Model::create(), sehingga usulan yang baru
+     * dibuat lalu langsung direview dalam proses yang sama (mis. seeder/command/tes) akan mengirim
+     * tahapan NULL ke proposal_reviews. Lewat HTTP hal ini tidak kelihatan karena instance-nya
+     * dibaca ulang dari basis data oleh route model binding.
+     */
+    protected $attributes = [
+        'tahapan_saat_ini' => self::TAHAPAN_URUTAN[0],
+    ];
+
     protected function casts(): array
     {
         return [

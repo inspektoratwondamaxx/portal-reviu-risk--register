@@ -45,6 +45,32 @@ Akun demo (password semua: `password`) — data contoh untuk uji coba, bukan dat
 
 Situs publik (tanpa login) ada di `/`; back office di `/dashboard` setelah login.
 
+## Menjalankan Tes
+
+Tes berjalan di PostgreSQL (bukan SQLite in-memory) karena query aplikasi memakai operator `ilike`
+dan ekstensi `pg_trgm`. Siapkan basis data tesnya sekali saja:
+
+```bash
+sudo -u postgres psql -c "CREATE DATABASE sishd_test OWNER sishd"
+sudo -u postgres psql -d sishd_test -c "CREATE EXTENSION IF NOT EXISTS pg_trgm"
+
+php artisan test
+```
+
+Nama basis data tes sudah dikunci di `phpunit.xml` (`sishd_test`) supaya tidak pernah menyentuh
+basis data pengembangan. Cakupan tes difokuskan ke bagian yang paling mahal kalau rusak diam-diam:
+
+- `ApprovalBerjenjangTest` — rantai 3 tahap approval, termasuk jaminan data master **tidak** dibuat
+  sebelum tahap terakhir, penolakan reviewer yang bukan pemilik tahap (403), dan revisi yang
+  mengulang dari tahap awal.
+- `HargaApiTest` — API publik: item nonaktif tidak bocor, filter benar-benar diterapkan, `per_page`
+  dibatasi.
+- `HspkCascadeTest` — perubahan harga SSH/SBU merambat otomatis ke HSPK beserta jejak auditnya.
+- `SafeFormulaEvaluatorTest` — hasil hitung formula ASB dan penolakan input di luar tata bahasanya.
+
+CI GitHub Actions (`.github/workflows/sishd-tests.yml`) menjalankan tes ini dengan service
+PostgreSQL setiap kali ada perubahan di `sishd/`.
+
 ## Yang Membuatnya "Dinamis" (bukan hard-coded)
 
 - **Kaskade HSPK**: `App\Services\HspkCalculationService` menghitung ulang HSPK otomatis begitu
