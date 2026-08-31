@@ -98,6 +98,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/buat', [ProposalController::class, 'create'])->name('create');
         Route::post('/', [ProposalController::class, 'store'])->name('store');
         Route::post('/cek-serupa', [ProposalController::class, 'cekSerupa'])->name('cek-serupa');
+        Route::get('/cari-item', [ProposalController::class, 'cariItem'])->name('cari-item');
         Route::get('/{proposal}', [ProposalController::class, 'show'])->name('show');
         Route::post('/{proposal}/ajukan-ulang', [ProposalController::class, 'ajukanUlang'])->name('ajukan-ulang');
     });

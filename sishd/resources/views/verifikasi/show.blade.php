@@ -33,7 +33,7 @@
                             @continue(in_array($key, ['tahun_anggaran_id']) || is_null($value) || $value === '')
                             <tr>
                                 <th style="width:180px;" class="text-capitalize">{{ str_replace('_', ' ', $key) }}</th>
-                                <td>{{ is_numeric($value) && $key === 'harga' ? 'Rp '.number_format($value, 0, ',', '.') : $value }}</td>
+                                <td>{{ is_numeric($value) && in_array($key, ['harga', 'besaran'], true) ? 'Rp '.number_format($value, 0, ',', '.') : $value }}</td>
                             </tr>
                         @endforeach
                     </table>

@@ -127,6 +127,12 @@ class ProposalWorkflowService
 
     private function materialize(Proposal $proposal, ProposalItem $item): void
     {
+        if ($proposal->tipe_perubahan === 'nonaktif') {
+            $this->materializeNonaktif($item);
+
+            return;
+        }
+
         $data = $item->data_usulan;
         $data['status'] = ItemStatus::Aktif->value;
         $data['is_active'] = true;
@@ -144,6 +150,19 @@ class ProposalWorkflowService
         if ($createdId) {
             $item->forceFill(['created_item_id' => $createdId])->save();
         }
+    }
+
+    /** Usulan nonaktifkan (tipe_perubahan=nonaktif): hanya matikan status, data lain tidak disentuh. */
+    private function materializeNonaktif(ProposalItem $item): void
+    {
+        $model = $item->existingItem();
+
+        if (! $model) {
+            return;
+        }
+
+        $model->forceFill(['status' => ItemStatus::Nonaktif->value, 'is_active' => false])->save();
+        $item->forceFill(['created_item_id' => $model->getKey()])->save();
     }
 
     private function materializeSsh(ProposalItem $item, array $data, Proposal $proposal): int
