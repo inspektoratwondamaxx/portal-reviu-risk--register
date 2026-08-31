@@ -38,7 +38,10 @@ Akun demo (password semua: `password`) — data contoh untuk uji coba, bukan dat
 | Admin SSH | adminssh@sishd.test |
 | Admin HSPK/ASB | adminhspk@sishd.test |
 | OPD/Operator | operator@sishd.test |
-| Verifikator | verifikator@sishd.test |
+| Verifikator (tahap 1) | verifikator@sishd.test |
+| Tim Standar Harga (tahap 2) | timstandarharga@sishd.test |
+| Pejabat Berwenang (tahap 3) | pejabat@sishd.test |
+| Pimpinan (dashboard saja) | pimpinan@sishd.test |
 
 Situs publik (tanpa login) ada di `/`; back office di `/dashboard` setelah login.
 
@@ -66,15 +69,51 @@ Situs publik (tanpa login) ada di `/`; back office di `/dashboard` setelah login
   (`App\Services\ExportService`) — struktur kolom SIPD bersifat praktik terbaik umum dan perlu
   disesuaikan dengan template resmi SIPD daerah masing-masing sebelum diunggah.
 
+## Approval Berjenjang
+
+Usulan OPD (Bab 11 & 22.3 kajian) berjalan lewat 3 tahap berurutan, masing-masing perannya sendiri
+— materialisasi ke tabel master (SSH/SBU/HSPK/ASB) baru terjadi setelah lolos tahap terakhir:
+
+```
+Operator (OPD) → Verifikator → Tim Standar Harga → Pejabat Berwenang → (data master diperbarui)
+```
+
+- `proposals.tahapan_saat_ini` menyimpan tahap yang sedang berjalan; `App\Models\Proposal`
+  menyediakan `nextTahapan()`/`roleForTahapan()`/`tahapanKe()` sebagai state machine-nya.
+- `ProposalWorkflowService::review()` selalu menentukan tahap dari `tahapan_saat_ini` milik usulan
+  itu sendiri (bukan dari parameter yang dikirim caller), dan `ProposalReviewController` menolak
+  (403) keputusan dari role yang bukan pemilik tahap saat ini — dicoba lompat tahap lewat POST
+  langsung pun ditolak di level server, bukan cuma disembunyikan di tampilan.
+- Ditolak/revisi mengembalikan usulan ke tahap pertama saat diajukan ulang, bukan melanjutkan dari
+  tahap terakhir.
+- Role **Pimpinan** sengaja hanya diberi akses Dashboard (tanpa menu Verifikasi/Master
+  Data/Laporan), sesuai kajian: *"Pimpinan cukup membuka dashboard tanpa masuk ke menu teknis."*
+
+## REST API Publik (v1)
+
+Fondasi integrasi SIPD Level 2 (Bab 21 kajian): endpoint JSON baca-saja yang menyajikan data yang
+sama dengan pencarian di website publik (`SshItem`/`SbuItem`/`Hspk`/`Asb` yang aktif), agar bisa
+dikonsumsi sistem lain. Tanpa login, dibatasi laju `throttle:60,1` per menit.
+
+| Endpoint | Keterangan |
+|---|---|
+| `GET /api/v1/ringkasan` | Jumlah data aktif per jenis + tahun anggaran aktif |
+| `GET /api/v1/ssh?q=&kode=&tahun=&per_page=` | Daftar SSH (berpaginasi, `per_page` maks. 100) |
+| `GET /api/v1/ssh/{kode_barang}` | Detail satu SSH |
+| `GET /api/v1/sbu`, `/api/v1/sbu/{kode}` | Daftar & detail SBU |
+| `GET /api/v1/hspk`, `/api/v1/hspk/{kode}` | Daftar & detail HSPK (detail menyertakan rincian komponen) |
+| `GET /api/v1/asb`, `/api/v1/asb/{kode}` | Daftar & detail ASB (detail menyertakan variabel & formula) |
+
+Contoh: `curl http://localhost:8000/api/v1/ssh?q=semen&tahun=2026`
+
+Mengirim `tahun` dengan tahun yang tidak ada di data akan menghasilkan 0 baris (bukan diam-diam
+menampilkan semua tahun) — filter selalu diterapkan persis seperti yang diminta.
+
 ## Di Luar Cakupan Sesi Ini
 
-- **Integrasi API SIPD Level 2** (Bab 21 kajian): route `routes/api.php` dan Sanctum sudah
-  terpasang sebagai fondasi, tetapi belum ada endpoint REST API SIPD nyata untuk dikonsumsi karena
-  tidak ada spesifikasi/kredensial API SIPD resmi yang diberikan.
-- **Approval berjenjang penuh** (Operator → Verifikator → Tim Standar Harga → Pejabat Berwenang):
-  model `proposal_reviews.tahapan` sudah mendukung banyak tahap, tetapi alur yang diimplementasi
-  saat ini satu tahap verifikasi (role `verifikator`) sesuai fitur inti "wajib dipertahankan" di
-  kajian; menambah tahap lanjutan tinggal menambah pemanggilan `ProposalWorkflowService::review()`
-  dengan parameter `$tahapan` berikutnya.
+- **Integrasi API SIPD Level 2 yang sesuai spesifikasi resmi**: endpoint baca-saja di atas adalah
+  fondasinya, tetapi belum ada endpoint tulis (mis. terima usulan dari SIPD) maupun format kolom
+  yang dicocokkan ke spesifikasi/kredensial API SIPD resmi, karena tidak ada spesifikasi resmi yang
+  diberikan. Sanctum sudah terpasang untuk mengamankan endpoint tulis tersebut nanti.
 - Data seed adalah contoh secukupnya untuk mendemonstrasikan tiap fitur (bukan ribuan baris data
   riil seperti pada mockup dashboard).
