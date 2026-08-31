@@ -238,9 +238,14 @@ class ProposalController extends Controller
         return back()->with('status', 'Usulan diajukan ulang untuk diverifikasi.');
     }
 
+    /**
+     * OPD hanya boleh membuka usulan miliknya sendiri; Super Admin boleh lintas OPD. Role verifikasi
+     * TIDAK diberi akses di sini — mereka memakai layar tersendiri di /verifikasi/{usulan}, dan
+     * middleware rute grup ini (role:super_admin,opd_operator) memang sudah menutup pintunya.
+     */
     private function authorizeAccess(Proposal $proposal): void
     {
         $user = Auth::user();
-        abort_unless($user->isSuperAdmin() || $user->hasRole(\App\Enums\RoleName::Verifikator) || $proposal->opd_id === $user->opd_id, 403);
+        abort_unless($user->isSuperAdmin() || $proposal->opd_id === $user->opd_id, 403);
     }
 }

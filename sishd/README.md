@@ -71,6 +71,16 @@ basis data pengembangan. Cakupan tes difokuskan ke bagian yang paling mahal kala
 CI GitHub Actions (`.github/workflows/sishd-tests.yml`) menjalankan tes ini dengan service
 PostgreSQL setiap kali ada perubahan di `sishd/`.
 
+### Dokumen QA
+
+Untuk keperluan serah terima/administrasi, tersedia dokumen pengujian di `docs/`:
+
+| Dokumen | Isi |
+|---|---|
+| `docs/RENCANA-DAN-KASUS-UJI.md` | Rencana pengujian + 60 kasus uji otomatis (Modul A–G) dan 21 kasus uji manual untuk UAT (Modul H–L), lengkap dengan langkah dan data uji konkret |
+| `docs/LAPORAN-HASIL-PENGUJIAN.md` | Laporan hasil pengujian: statistik per modul, daftar temuan beserta tingkat keparahan, risiko, dan rekomendasi |
+| `docs/BERITA-ACARA-UAT.md` | Templat Berita Acara UAT — seluruh kolom nama, nomor, tanggal, dan tanda tangan berupa isian kosong untuk dilengkapi instansi |
+
 ## Yang Membuatnya "Dinamis" (bukan hard-coded)
 
 - **Kaskade HSPK**: `App\Services\HspkCalculationService` menghitung ulang HSPK otomatis begitu
