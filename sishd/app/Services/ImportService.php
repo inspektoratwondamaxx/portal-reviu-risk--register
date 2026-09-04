@@ -54,7 +54,7 @@ class ImportService
                 $mirip = $this->duplicateDetectionService->findSimilar((string) $row['uraian'], $row['merek'] ?? null);
 
                 SshItem::create([
-                    'kode_barang' => 'SSH-'.now()->format('ymd').'-'.str_pad((string) ($baris + random_int(0, 999)), 4, '0', STR_PAD_LEFT),
+                    'kode_barang' => $this->generateKode(SshItem::class, 'kode_barang', 'SSH'),
                     'asset_code_id' => $assetCode?->id,
                     'tahun_anggaran_id' => $tahun->id,
                     'uraian' => $row['uraian'],
@@ -108,7 +108,7 @@ class ImportService
                 $tahun = TahunAnggaran::firstOrCreate(['tahun' => (int) ($row['tahun'] ?: now()->year)]);
 
                 SbuItem::create([
-                    'kode' => $row['kode'] ?: 'SBU-'.now()->format('ymd').'-'.str_pad((string) $baris, 4, '0', STR_PAD_LEFT),
+                    'kode' => $row['kode'] ?: $this->generateKode(SbuItem::class, 'kode', 'SBU'),
                     'kategori' => $row['kategori'] ?: 'lainnya',
                     'uraian' => $row['uraian'],
                     'satuan' => $row['satuan'],
@@ -135,6 +135,30 @@ class ImportService
         ])->save();
 
         return $import->refresh();
+    }
+
+    /**
+     * Bangkitkan kode master yang dijamin belum terpakai.
+     *
+     * Sebelumnya kode SSH dibangkitkan dari nomor baris ditambah angka acak 0-999, sedangkan kode
+     * SBU dari nomor baris saja. Keduanya kolom UNIQUE, sehingga: impor puluhan baris pada tanggal
+     * yang sama berpeluang besar bentrok sendiri (baris yang datanya benar gagal masuk dengan pesan
+     * galat SQL mentah, dan barisnya berpindah-pindah tiap kali dijalankan), dan mengimpor berkas
+     * kedua pada hari yang sama pasti bentrok di nomor baris yang sama. Karena itu nomor urut
+     * dinaikkan sampai benar-benar bebas, bukan diundi.
+     *
+     * @param  class-string<\Illuminate\Database\Eloquent\Model>  $model
+     */
+    private function generateKode(string $model, string $kolom, string $prefix): string
+    {
+        $awalan = $prefix.'-'.now()->format('ymd').'-';
+        $urutan = ((int) $model::max('id')) + 1;
+
+        while ($model::where($kolom, $awalan.str_pad((string) $urutan, 4, '0', STR_PAD_LEFT))->exists()) {
+            $urutan++;
+        }
+
+        return $awalan.str_pad((string) $urutan, 4, '0', STR_PAD_LEFT);
     }
 
     /** @param  array<int, string>  $columns */

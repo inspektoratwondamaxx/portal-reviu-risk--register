@@ -10,20 +10,25 @@
 
 ## 1. Ringkasan Eksekutif
 
-Pengujian otomatis atas 60 kasus uji pada enam modul inti SISHD dijalankan dan **seluruhnya lulus
-(100%)** dengan 175 titik pemeriksaan (assertion), tanpa kegagalan tersisa. Modul yang telah
+Pengujian otomatis atas 75 kasus uji pada tujuh modul SISHD dijalankan dan **seluruhnya lulus
+(100%)** dengan 234 titik pemeriksaan (assertion), tanpa kegagalan tersisa. Modul yang telah
 tercakup adalah bagian sistem yang paling berisiko bila keliru: batas akses antar-OPD dan
 antar-role, rantai persetujuan berjenjang, pemetaan data usulan ke data induk, kaskade
-perhitungan harga, dan evaluasi formula ASB.
+perhitungan harga, evaluasi formula ASB, serta import/export Excel sebagai satu-satunya jalur
+yang menerima berkas dari luar sistem.
 
-Selama siklus pengujian ini ditemukan **4 cacat**, seluruhnya telah diperbaiki dan diverifikasi
-ulang. Dua di antaranya berkategori Tinggi dan tidak terlihat melalui pemakaian normal lewat
-peramban — keduanya baru terungkap justru karena pengujian otomatis dan pengujian batas dijalankan.
+Selama siklus pengujian ini ditemukan **6 cacat**, seluruhnya telah diperbaiki dan diverifikasi
+ulang. Tiga di antaranya berkategori Tinggi dan tidak terlihat melalui pemakaian normal lewat
+peramban — ketiganya baru terungkap justru karena pengujian otomatis dan pengujian batas
+dijalankan. Satu di antaranya (T-05) bahkan bersifat **acak**: baris yang gagal berpindah-pindah
+setiap kali import dijalankan, sehingga hampir mustahil ditemukan lewat pengujian manual sekali
+jalan. Karena itu rangkaian pengujian dijalankan tiga kali berturut-turut untuk memastikan
+perbaikannya benar-benar stabil, bukan kebetulan lolos.
 
 **Rekomendasi**: sistem **layak dilanjutkan ke tahap User Acceptance Testing (UAT)** bersama
 perwakilan pengguna. Belum direkomendasikan langsung ke produksi sebelum kasus uji manual bertanda
-wajib pada Bagian II dokumen rujukan (khususnya import/export Excel dan survei harga) dinyatakan
-lulus, karena modul tersebut belum tercakup pengujian otomatis.
+wajib pada Bagian II dokumen rujukan (khususnya survei harga, pemetaan kode, dan CRUD master data)
+dinyatakan lulus, karena modul tersebut belum tercakup pengujian otomatis.
 
 ## 2. Ruang Lingkup dan Metodologi
 
@@ -56,8 +61,9 @@ data induk setelah seluruh tahap persetujuan terlampaui.
 | E | Kaskade Harga HSPK | 3 | 3 | 0 | 0 | 100% |
 | F | Formula ASB | 10 | 10 | 0 | 0 | 100% |
 | G | Pengujian Asap | 2 | 2 | 0 | 0 | 100% |
-| **Total otomatis** | | **60** | **60** | **0** | **0** | **100%** |
-| H–L | Modul manual (UAT) | 21 | – | – | 21 | Menunggu UAT |
+| I | Import & Export Excel | 15 | 15 | 0 | 0 | 100% |
+| **Total otomatis** | | **75** | **75** | **0** | **0** | **100%** |
+| H, J–L | Modul manual (UAT) | 15 | – | – | 15 | Menunggu UAT |
 
 ## 4. Daftar Temuan
 
@@ -69,12 +75,15 @@ Seluruh temuan di bawah ini ditemukan **dan** diperbaiki dalam siklus pengembang
 | T-02 | Nilai default kolom `tahapan_saat_ini` hanya didefinisikan di basis data, tidak di model. Akibatnya usulan yang dibuat lalu langsung direview dalam satu proses (skenario seeder/perintah terjadwal/pengujian) mengirim tahapan kosong dan gagal pada batasan NOT NULL. Tidak terlihat lewat peramban karena data dibaca ulang antar-permintaan. | **Tinggi** | C — Approval Berjenjang | Selesai diperbaiki |
 | T-03 | Besaran (harga) usulan SBU hilang secara senyap menjadi 0 karena dikirim sebagai `harga` sementara kolom yang dipakai adalah `besaran`. Tidak ada pesan galat — data tersimpan namun bernilai salah. | **Sedang** | B — Usulan OPD | Selesai diperbaiki |
 | T-04 | Filter tahun pada API publik mengabaikan filter dan menampilkan **seluruh** tahun ketika tahun yang diminta tidak ada dalam data, karena kondisi "tidak difilter" dan "difilter tetapi tidak ditemukan" tidak dibedakan. Berisiko menyesatkan sistem lain yang mengonsumsi API secara otomatis. | **Sedang** | D — API Publik | Selesai diperbaiki |
+| T-05 | Kode barang hasil import SSH dibangkitkan dari nomor baris ditambah angka acak 0–999 pada kolom yang UNIQUE. Mengimpor puluhan baris pada tanggal yang sama berpeluang besar bentrok sendiri: baris yang datanya benar gagal masuk dengan pesan galat SQL mentah, dan baris yang gagal berpindah-pindah setiap kali dijalankan. Terbukti pada pengujian impor 60 baris valid — 28 baris gagal. | **Tinggi** | I — Import Excel | Selesai diperbaiki |
+| T-06 | Kode SBU yang dibangkitkan sistem (saat kolom kode dikosongkan) hanya memakai nomor baris, sehingga mengimpor berkas kedua pada hari yang sama pasti bentrok pada nomor baris yang sama. | **Sedang** | I — Import Excel | Selesai diperbaiki |
 
 ### Catatan kualitas kode (bukan cacat fungsional)
 
 | ID | Deskripsi | Keparahan | Status |
 |---|---|---|---|
 | K-01 | Pada pemeriksaan hak akses usulan OPD terdapat cabang untuk role Verifikator yang tidak pernah tercapai, karena middleware rute sudah lebih dulu menutup akses role tersebut. Tidak menimbulkan celah keamanan (gagal ke arah menolak), namun menyesatkan pembaca kode karena menyiratkan jalur akses yang sebenarnya tidak ada. | Rendah | Selesai dirapikan |
+| K-02 | Proses import menangani galat per baris dan melanjutkan ke baris berikutnya. Pada PostgreSQL, satu pernyataan yang gagal **di dalam sebuah transaksi** membatalkan seluruh transaksi, sehingga bila proses import dijalankan di dalam transaksi (mis. dibungkus `DB::transaction`), satu baris bermasalah akan menggagalkan seluruh sisa berkas. Pada alur produksi saat ini import tidak dibungkus transaksi sehingga tidak berdampak, namun perlu diperhatikan bila alur ini diubah. | Rendah | Dicatat, belum diubah |
 
 ## 5. Risiko dan Rekomendasi
 
@@ -82,7 +91,7 @@ Seluruh temuan di bawah ini ditemukan **dan** diperbaiki dalam siklus pengembang
 
 | No | Risiko | Dampak | Saran Penanganan |
 |---|---|---|---|
-| 1 | Modul import/export Excel, survei harga, pemetaan kode, dan CRUD master data belum tercakup pengujian otomatis | Perubahan kode di masa depan dapat merusak modul ini tanpa terdeteksi | Uji manual pada UAT (Bagian II dokumen rujukan); tambahkan pengujian otomatis pada iterasi berikutnya, diprioritaskan pada import Excel karena melibatkan berkas dari luar sistem |
+| 1 | Modul survei harga, pemetaan kode, dan CRUD master data belum tercakup pengujian otomatis | Perubahan kode di masa depan dapat merusak modul ini tanpa terdeteksi | Uji manual pada UAT (Bagian II dokumen rujukan); tambahkan pengujian otomatis pada iterasi berikutnya. Modul import/export Excel yang sebelumnya menjadi prioritas kini sudah tercakup (Modul I) |
 | 2 | Data yang diuji adalah data contoh, bukan data harga riil daerah | Perilaku pada volume dan variasi data sebenarnya belum terbukti | Lakukan uji coba memakai cuplikan data riil sebelum peluncuran |
 | 3 | Belum ada pengujian beban (jumlah pengguna/data besar) | Kinerja saat dipakai serentak banyak OPD belum diketahui | Lakukan pengujian beban terpisah, terutama pada proses import dan export data besar |
 | 4 | Integrasi SIPD Level 2 (tulis) belum tersedia | Pertukaran data dengan SIPD masih manual lewat Excel | Menunggu spesifikasi resmi API SIPD; endpoint baca-saja sudah tersedia sebagai fondasi |

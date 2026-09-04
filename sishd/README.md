@@ -67,6 +67,8 @@ basis data pengembangan. Cakupan tes difokuskan ke bagian yang paling mahal kala
   dibatasi.
 - `HspkCascadeTest` — perubahan harga SSH/SBU merambat otomatis ke HSPK beserta jejak auditnya.
 - `SafeFormulaEvaluatorTest` — hasil hitung formula ASB dan penolakan input di luar tata bahasanya.
+- `ImportExportTest` — import Excel: seluruh baris valid benar-benar masuk, baris bermasalah
+  dilaporkan per nomor baris, berkas boleh diimpor ulang di hari yang sama; plus templat dan export.
 
 CI GitHub Actions (`.github/workflows/sishd-tests.yml`) menjalankan tes ini dengan service
 PostgreSQL setiap kali ada perubahan di `sishd/`.
@@ -77,7 +79,7 @@ Untuk keperluan serah terima/administrasi, tersedia dokumen pengujian di `docs/`
 
 | Dokumen | Isi |
 |---|---|
-| `docs/RENCANA-DAN-KASUS-UJI.md` | Rencana pengujian + 60 kasus uji otomatis (Modul A–G) dan 21 kasus uji manual untuk UAT (Modul H–L), lengkap dengan langkah dan data uji konkret |
+| `docs/RENCANA-DAN-KASUS-UJI.md` | Rencana pengujian + 75 kasus uji otomatis (Modul A–I) dan kasus uji manual untuk UAT (Modul H, J–L), lengkap dengan langkah dan data uji konkret |
 | `docs/LAPORAN-HASIL-PENGUJIAN.md` | Laporan hasil pengujian: statistik per modul, daftar temuan beserta tingkat keparahan, risiko, dan rekomendasi |
 | `docs/BERITA-ACARA-UAT.md` | Templat Berita Acara UAT — seluruh kolom nama, nomor, tanggal, dan tanda tangan berupa isian kosong untuk dilengkapi instansi |
 

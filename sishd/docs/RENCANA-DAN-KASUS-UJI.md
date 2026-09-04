@@ -19,7 +19,8 @@ Pengujian mencakup modul-modul berikut:
 | D | API Publik | Endpoint baca-saja `/api/v1` untuk konsumsi sistem lain |
 | E | Kaskade Harga | Perubahan harga SSH/SBU merambat ke HSPK |
 | F | Formula ASB | Evaluasi formula terparameter tanpa `eval()` |
-| G | Master Data & Pendukung | CRUD master, import/export Excel, survei harga, pemetaan kode, laporan |
+| I | Import & Export Excel | Import master SSH/SBU dari berkas, templat, export biasa & format SIPD |
+| G | Master Data & Pendukung | CRUD master, survei harga, pemetaan kode, laporan |
 
 **Di luar cakupan**: pengujian beban/kinerja (load testing), pengujian penetrasi keamanan mendalam,
 dan pengujian kompatibilitas lintas peramban. Ketiganya disarankan sebagai kegiatan terpisah.
@@ -181,6 +182,28 @@ Berkas: `tests/Feature/ExampleTest.php`, `tests/Unit/ExampleTest.php`
 | G-01 | Halaman depan dapat diakses | Panggil `GET /` | — | HTTP 200 | Lulus |
 | G-02 | Kerangka pengujian berjalan | Jalankan pengujian unit dasar | — | Lulus | Lulus |
 
+## Modul I — Import & Export Excel
+
+Berkas: `tests/Feature/ImportExportTest.php`
+
+| ID | Skenario | Langkah Pengujian | Data Uji | Hasil Diharapkan | Status |
+|---|---|---|---|---|---|
+| I-01 | Seluruh baris valid masuk tanpa ada yang gagal | 1. Siapkan berkas 60 baris valid 2. Jalankan import SSH 3. Periksa ringkasan | 60 baris: uraian, satuan "Unit", harga 10.001–10.060 | 60 sukses, 0 gagal, 60 item di master, status "selesai" | Lulus |
+| I-02 | Kode barang hasil import unik | 1. Import 40 baris valid 2. Bandingkan seluruh kode barang | 40 baris valid | Tidak ada kode barang kembar | Lulus |
+| I-03 | Import ulang di hari yang sama tetap berhasil | 1. Import berkas 15 baris 2. Import berkas yang sama lagi | Berkas sama, dua kali | Kedua import 0 gagal; 30 item; 30 kode unik | Lulus |
+| I-04 | Baris bermasalah dilaporkan beserta nomor barisnya | 1. Import berkas campuran valid & tidak valid | 2 valid + 1 tanpa uraian + 1 tanpa satuan | 2 sukses, 2 gagal, status "selesai", galat menyebut "Baris 3" dan "Baris 4" | Lulus |
+| I-05 | Berkas yang seluruh barisnya bermasalah berstatus gagal | 1. Import berkas yang semua barisnya tidak valid | 2 baris tanpa uraian | 0 sukses, 2 gagal, status "gagal", master tidak bertambah | Lulus |
+| I-06 | Baris kosong di tengah berkas diabaikan | 1. Import berkas dengan baris kosong di tengah | Baris data, baris kosong, baris data | Total baris dihitung 2 (bukan 3), 2 sukses | Lulus |
+| I-07 | Import tercatat atas nama penggunanya | 1. Import sebagai Admin SSH 2. Periksa catatan import | 2 baris valid | `user_id`, jenis "ssh", nama berkas, dan `created_by` item tercatat benar | Lulus |
+| I-08 | Import SBU memakai kode dari berkas bila diisi | 1. Import SBU dengan kolom kode terisi | Kode "SBU-UJI-001", besaran 900.000 | Item tersimpan dengan kode & besaran sesuai berkas | Lulus |
+| I-09 | Import SBU tanpa kode tidak bentrok antar berkas | 1. Import berkas A tanpa kolom kode 2. Import berkas B dengan isi sama | Dua berkas, masing-masing 2 baris | Keduanya 0 gagal; 4 item; 4 kode unik | Lulus |
+| I-10 | Import SBU menolak baris tanpa besaran | 1. Import SBU dengan besaran dikosongkan | 1 baris tanpa besaran | 0 sukses, 1 gagal, master tidak bertambah | Lulus |
+| I-11 | Judul kolom templat sama dengan yang dibaca importer | 1. Unduh templat SSH & SBU 2. Bandingkan judul kolomnya dengan definisi importer | Templat SSH & SBU | Judul kolom sama persis untuk kedua jenis | Lulus |
+| I-12 | Templat SSH bisa langsung diimpor kembali | 1. Unduh templat SSH 2. Import berkas templat itu apa adanya | Templat beserta baris contohnya | 1 baris terbaca, 0 gagal (baris contoh valid) | Lulus |
+| I-13 | Export SSH berisi data dan judul kolom | 1. Siapkan 1 item SSH 2. Jalankan export 3. Buka berkasnya | Kode "EXP-0001", harga 82.000 | Berkas ada; judul kolom "Kode Barang"; baris data sesuai isi master | Lulus |
+| I-14 | Export tanpa data tetap menghasilkan berkas | 1. Jalankan export saat master kosong | Master tanpa data | Berkas tetap terbentuk berisi judul kolom saja — bukan galat | Lulus |
+| I-15 | Export SBU dan format SIPD menghasilkan berkas | 1. Siapkan 1 item SBU 2. Jalankan export SBU dan export SIPD | Kode "SBU-EXP-1" | Kedua berkas terbentuk; export tercatat atas nama penggunanya | Lulus |
+
 ---
 
 # BAGIAN II — KASUS UJI MANUAL (UAT)
@@ -200,14 +223,13 @@ Tanda **[W]** = wajib lulus sebagai syarat penerimaan.
 
 ## Modul I — Import & Export Excel
 
+> Modul ini **sudah tercakup pengujian otomatis** — lihat Bagian I, Modul I. Yang tersisa untuk
+> diuji manual pada UAT hanyalah dua hal yang bergantung pada peramban dan format instansi:
+
 | ID | Skenario | Langkah Pengujian | Data Uji | Hasil Diharapkan | Status |
 |---|---|---|---|---|---|
-| I-01 **[W]** | Export data SSH ke Excel | 1. Buka Master Data → SSH 2. Klik Export | Data minimal 5 baris | Berkas `.xlsx` terunduh; isi & judul kolom sesuai tampilan tabel | |
-| I-02 | Export saat hasil filter kosong | 1. Terapkan filter hingga 0 hasil 2. Klik Export | Filter tanpa hasil | Berkas tetap terunduh berisi judul kolom saja, atau muncul pesan informatif — bukan galat | |
-| I-03 **[W]** | Import data SSH dari Excel | 1. Siapkan berkas sesuai templat 2. Buka menu Import 3. Unggah 4. Konfirmasi | Berkas berisi 3 baris data valid | Ketiga baris masuk; ringkasan jumlah berhasil ditampilkan | |
-| I-04 **[W]** | Import berkas dengan baris bermasalah | 1. Unggah berkas berisi campuran baris valid & tidak valid | 3 baris valid + 2 baris tanpa harga | Baris valid diproses, baris bermasalah dilaporkan beserta nomor barisnya — bukan gagal senyap | |
-| I-05 | Import berkas format salah | 1. Unggah berkas selain Excel (mis. `.pdf`) | Berkas PDF | Ditolak dengan pesan jelas; tidak ada data masuk | |
-| I-06 **[W]** | Export format SIPD | 1. Buka menu export format SIPD 2. Unduh | Data SSH aktif | Susunan kolom sesuai format SIPD yang berlaku di instansi | |
+| I-M1 | Import berkas format salah lewat antarmuka | 1. Buka menu Import 2. Unggah berkas selain Excel (mis. `.pdf`) | Berkas PDF | Ditolak dengan pesan jelas; tidak ada data masuk | |
+| I-M2 **[W]** | Kesesuaian susunan kolom export SIPD | 1. Buka menu export format SIPD 2. Unduh 3. Bandingkan dengan format SIPD yang berlaku | Data SSH aktif | Susunan kolom sesuai format SIPD yang berlaku di instansi saat ini | |
 
 ## Modul J — Survei Harga
 
