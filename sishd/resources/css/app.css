@@ -1,0 +1,67 @@
+@import "bootstrap/dist/css/bootstrap.min.css";
+@import "bootstrap-icons/font/bootstrap-icons.css";
+
+:root {
+    --sishd-navy: #0b2447;
+    --sishd-blue: #1e4fa3;
+}
+
+body {
+    background-color: #f4f6f9;
+}
+
+.sidebar {
+    min-height: 100vh;
+    background-color: var(--sishd-navy);
+}
+
+.sidebar .nav-link {
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 0.9rem;
+}
+
+.sidebar .nav-link.active,
+.sidebar .nav-link:hover {
+    color: #fff;
+    background-color: rgba(255, 255, 255, 0.08);
+    border-radius: 0.375rem;
+}
+
+.sidebar .nav-header {
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 0.72rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    padding: 0.75rem 0.75rem 0.25rem;
+}
+
+.stat-card {
+    border: none;
+    border-radius: 0.75rem;
+    color: #fff;
+}
+
+.stat-card .stat-value {
+    font-size: 1.9rem;
+    font-weight: 700;
+}
+
+.bg-ssh { background: linear-gradient(135deg, #2563eb, #1e40af); }
+.bg-sbu { background: linear-gradient(135deg, #16a34a, #15803d); }
+.bg-hspk { background: linear-gradient(135deg, #ea580c, #c2410c); }
+.bg-asb { background: linear-gradient(135deg, #7c3aed, #5b21b6); }
+
+.table-sishd thead {
+    background-color: #eef2f9;
+}
+
+.badge-status {
+    font-weight: 500;
+}
+
+.navbar-brand small {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 400;
+    color: #6b7280;
+}

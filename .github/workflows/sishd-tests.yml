@@ -1,0 +1,79 @@
+name: SISHD Tests
+
+on:
+  # Hanya main yang dijalankan lewat push; branch lain sudah tercakup oleh event pull_request,
+  # supaya satu push ke branch PR tidak memicu dua run yang identik.
+  push:
+    branches:
+      - main
+    paths:
+      - 'sishd/**'
+      - '.github/workflows/sishd-tests.yml'
+  pull_request:
+    paths:
+      - 'sishd/**'
+      - '.github/workflows/sishd-tests.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    name: PHPUnit (PostgreSQL)
+
+    # Query aplikasi memakai `ilike` dan ekstensi pg_trgm, jadi tes tidak bisa jalan di SQLite.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: sishd
+          POSTGRES_PASSWORD: sishd
+          POSTGRES_DB: sishd_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    defaults:
+      run:
+        working-directory: sishd
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, pdo_pgsql, bcmath, gd
+          coverage: none
+
+      - name: Cache Composer packages
+        uses: actions/cache@v4
+        with:
+          path: sishd/vendor
+          key: ${{ runner.os }}-composer-${{ hashFiles('sishd/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Prepare environment
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Run test suite
+        env:
+          DB_CONNECTION: pgsql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 5432
+          DB_DATABASE: sishd_test
+          DB_USERNAME: sishd
+          DB_PASSWORD: sishd
+        run: php artisan test
