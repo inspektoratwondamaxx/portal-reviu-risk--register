@@ -85,6 +85,14 @@ basis data pengembangan. Cakupan tes difokuskan ke bagian yang paling mahal kala
 - `SafeFormulaEvaluatorTest` — hasil hitung formula ASB dan penolakan input di luar tata bahasanya.
 - `ImportExportTest` — import Excel: seluruh baris valid benar-benar masuk, baris bermasalah
   dilaporkan per nomor baris, berkas boleh diimpor ulang di hari yang sama; plus templat dan export.
+- `MasterDataCrudTest` — CRUD SSH/SBU/HSPK/ASB: kode otomatis tidak bentrok dengan kode yang
+  diketik petugas, perubahan harga selalu meninggalkan riwayat, item nonaktif tetap tersimpan, dan
+  admin satu domain tidak bisa menyunting master domain lain.
+- `SurveiHargaTest` — survei harga lapangan: surveyor tidak bisa dipalsukan lewat form, bukti
+  digital ikut terhapus bersama datanya, survei orang lain tidak bisa dihapus, dan angka
+  rekomendasi memakai median sehingga tahan terhadap satu penawaran nyeleneh.
+- `PemetaanKodeTest` — pemetaan Kode Aset → Rekening → SIPD: statusnya dihitung ulang dari keadaan
+  data terkini (valid / belum ada rekening / duplikasi / belum dipetakan), bukan status yang basi.
 
 CI GitHub Actions (`.github/workflows/sishd-tests.yml`) menjalankan tes ini dengan service
 PostgreSQL setiap kali ada perubahan di `sishd/`.

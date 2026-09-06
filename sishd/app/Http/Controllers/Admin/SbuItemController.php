@@ -6,6 +6,7 @@ use App\Enums\ItemStatus;
 use App\Http\Controllers\Controller;
 use App\Models\SbuItem;
 use App\Models\TahunAnggaran;
+use App\Services\KodeGenerator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -40,12 +41,12 @@ class SbuItemController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, KodeGenerator $kodeGenerator): RedirectResponse
     {
         $validated = $this->validated($request);
 
         $item = SbuItem::create($validated + [
-            'kode' => $validated['kode'] ?: 'SBU-'.now()->format('ymd').'-'.str_pad((string) ((SbuItem::max('id') ?? 0) + 1), 4, '0', STR_PAD_LEFT),
+            'kode' => ($validated['kode'] ?? null) ?: $kodeGenerator->next(SbuItem::class, 'kode', 'SBU'),
             'status' => ItemStatus::Aktif->value,
             'is_active' => true,
             'created_by' => Auth::id(),

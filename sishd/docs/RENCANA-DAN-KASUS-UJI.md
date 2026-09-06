@@ -20,7 +20,10 @@ Pengujian mencakup modul-modul berikut:
 | E | Kaskade Harga | Perubahan harga SSH/SBU merambat ke HSPK |
 | F | Formula ASB | Evaluasi formula terparameter tanpa `eval()` |
 | I | Import & Export Excel | Import master SSH/SBU dari berkas, templat, export biasa & format SIPD |
-| G | Master Data & Pendukung | CRUD master, survei harga, pemetaan kode, laporan |
+| H | Master Data (CRUD) | CRUD SSH/SBU/HSPK/ASB, kode otomatis, riwayat harga, nonaktifkan/aktifkan |
+| J | Survei Harga | Perekaman survei lapangan, bukti digital, rekap statistik harga |
+| K | Pemetaan Kode | Kode Aset → Kode Rekening → Kode SIPD beserta status validasinya |
+| G | Laporan & Pendukung | Dashboard, laporan perubahan harga, jejak audit |
 
 **Di luar cakupan**: pengujian beban/kinerja (load testing), pengujian penetrasi keamanan mendalam,
 dan pengujian kompatibilitas lintas peramban. Ketiganya disarankan sebagai kegiatan terpisah.
@@ -33,7 +36,8 @@ Pengujian dilakukan dua lapis:
    approval, batas otorisasi, pemetaan data, perhitungan, dan kontrak API. Dijalankan dengan
    `php artisan test` dan otomatis dieksekusi CI pada setiap perubahan.
 2. **Manual (UAT)** — untuk hal yang perlu penilaian manusia: kenyamanan tampilan, kesesuaian
-   istilah dengan kebiasaan instansi, dan modul yang belum tercakup pengujian otomatis (Modul G).
+   istilah dengan kebiasaan instansi, dan modul yang belum tercakup pengujian otomatis (Modul G
+   dan sisa Modul H/I/J/K yang bergantung pada peramban atau format resmi instansi).
 
 ## 3. Lingkungan Pengujian
 
@@ -62,7 +66,7 @@ Pengujian dilakukan dua lapis:
 | No | Asumsi / Risiko | Mitigasi |
 |---|---|---|
 | 1 | Data uji adalah data contoh, bukan data harga riil daerah | Sebelum produksi, lakukan pengujian ulang memakai cuplikan data riil |
-| 2 | Modul G belum tercakup pengujian otomatis | Diuji manual pada UAT; disarankan ditambah pengujian otomatis pada iterasi berikut |
+| 2 | Modul G (dashboard, laporan, jejak audit) belum tercakup pengujian otomatis | Diuji manual pada UAT; disarankan ditambah pengujian otomatis pada iterasi berikut |
 | 3 | Integrasi SIPD Level 2 (tulis) belum tersedia karena spesifikasi resmi belum diperoleh | API baca-saja diuji; integrasi tulis diuji setelah spesifikasi tersedia |
 | 4 | Pengujian dijalankan pada lingkungan pengembangan, bukan server produksi instansi | Ulangi pengujian asap (smoke test) setelah pemasangan di server instansi |
 
@@ -206,6 +210,82 @@ Berkas: `tests/Feature/ImportExportTest.php`
 
 ---
 
+## Modul H — Master Data (CRUD SSH/SBU/HSPK/ASB)
+
+Berkas: `tests/Feature/MasterDataCrudTest.php`
+
+| ID | Skenario | Langkah Pengujian | Data Uji | Hasil Diharapkan | Status |
+|---|---|---|---|---|---|
+| H-01 | Kode barang dibuat otomatis bila dikosongkan | 1. Login sebagai Admin SSH 2. Tambah item SSH tanpa mengisi Kode Barang 3. Simpan | Uraian "Semen Portland 40 Kg", Satuan "Zak", Harga 65.000 | Tersimpan dengan kode berformat `SSH-yymmdd-NNNN`, status aktif, pembuat tercatat | Lulus |
+| H-02 | Kode barang boleh diisi manual | 1. Tambah item SSH dengan Kode Barang diisi 2. Simpan | Kode "SSH-MANUAL-01" | Kode tersimpan persis seperti yang diketik | Lulus |
+| H-03 | Kode barang ganda ditolak | 1. Simpan item dengan kode tertentu 2. Simpan item lain dengan kode yang sama | Kode "SSH-DUP-01" dua kali | Galat validasi pada `kode_barang`; hanya satu item tersimpan | Lulus |
+| H-04 | Field wajib divalidasi | 1. Kirim form SSH kosong 2. Simpan | Seluruh field kosong | Galat validasi pada `uraian`, `satuan`, `harga`, `tahun_anggaran_id`; tidak ada data tersimpan | Lulus |
+| H-05 | Perubahan harga tercatat di riwayat | 1. Ubah harga item SSH 2. Isi Dasar Perubahan 3. Simpan 4. Periksa riwayat harga | 65.000 → 71.500, dasar "Hasil survei harga Maret 2026" | Riwayat mencatat harga lama, harga baru, persentase 10%, dasar perubahan, dan penggunanya | Lulus |
+| H-06 | Menyunting tanpa mengubah harga tidak membuat riwayat palsu | 1. Ubah hanya uraian item 2. Simpan | Harga tetap 65.000 | Uraian berubah; riwayat harga tidak bertambah | Lulus |
+| H-07 | Item nonaktif hilang dari daftar tetapi tetap tersimpan | 1. Nonaktifkan item 2. Buka daftar SSH 3. Buka daftar dengan filter status nonaktif | Item aktif | Kode barang hilang dari daftar bawaan, tetap muncul pada filter nonaktif, baris tetap ada di basis data | Lulus |
+| H-08 | Item nonaktif dapat diaktifkan kembali | 1. Nonaktifkan item 2. Aktifkan kembali | Item hasil H-07 | Status kembali aktif | Lulus |
+| H-09 | Deteksi barang serupa lintas penulisan | 1. Simpan item "Semen Portland 40 Kg" 2. Jalankan cek serupa dengan penulisan berbeda | Kata kunci "semen portland 40kg" | Item lama muncul sebagai kandidat serupa | Lulus |
+| H-10 | Kode SBU dibuat otomatis | 1. Tambah item SBU tanpa mengisi Kode 2. Simpan | Kategori "honorarium", Besaran 1.400.000 | Tersimpan dengan kode berformat `SBU-yymmdd-NNNN` | Lulus |
+| H-11 | Kategori SBU di luar daftar ditolak | 1. Tambah SBU dengan kategori karangan 2. Simpan | `kategori = "kategori-karangan"` | Galat validasi pada `kategori`; data tidak tersimpan | Lulus |
+| H-12 | HSPK menghitung ulang setelah komponen ditambah | 1. Buat HSPK 2. Tambahkan komponen SSH dengan koefisien | Semen Rp65.000 × koefisien 2,5 | Harga satuan HSPK menjadi Rp162.500 (hasil hitung, bukan ketikan) | Lulus |
+| H-13 | Komponen HSPK lain tidak bisa dihapus lewat URL | 1. Buat dua HSPK 2. Hapus komponen milik HSPK B lewat jalur HSPK A | ID komponen milik HSPK berbeda | Ditolak (HTTP 404); komponen tetap ada | Lulus |
+| H-14 | ASB menghitung hasil dari formula & variabelnya | 1. Buat ASB 2. Tambah 2 variabel manual 3. Simpan formula | 40 peserta × Rp250.000 | Hasil perhitungan ASB = Rp10.000.000 | Lulus |
+| H-15 | Formula memakai variabel belum terdaftar ditolak | 1. Simpan formula yang menyebut variabel tak dikenal | `{variabel_hantu} * 2` | Galat validasi pada `ekspresi`; formula tidak tersimpan | Lulus |
+| H-16 | Kode otomatis tidak bentrok dengan kode manual | 1. Simpan item berkode manual berformat sama dengan format otomatis 2. Simpan item berikutnya tanpa kode | Kode manual `SSH-yymmdd-0002` | Kedua item tersimpan dengan kode berbeda; tidak ada halaman galat | Lulus |
+| H-17 | Perlindungan bentrok kode berlaku juga di SBU/HSPK/ASB | 1. Ulangi H-16 pada SBU, HSPK, dan ASB | Kode manual berformat sama pada tiap jenis | Masing-masing menyimpan dua data tanpa bentrok | Lulus |
+| H-18 | Admin SSH tidak bisa menyunting master HSPK/ASB | 1. Login sebagai Admin SSH 2. Buka menu HSPK 3. Kirim POST pembuatan ASB | — | Keduanya ditolak (403); tidak ada ASB terbentuk | Lulus |
+| H-19 | Admin HSPK/ASB tidak bisa menyunting master SSH/SBU | 1. Login sebagai Admin HSPK/ASB 2. Buka menu SSH 3. Kirim POST pembuatan SSH | — | Keduanya ditolak (403); tidak ada SSH terbentuk | Lulus |
+| H-20 | Operator OPD tidak bisa mengubah master data | 1. Login sebagai operator 2. Kirim PUT perubahan harga item SSH | Harga diubah menjadi 1 | Ditolak (403); harga item tidak berubah | Lulus |
+
+## Modul J — Survei Harga
+
+Berkas: `tests/Feature/SurveiHargaTest.php`
+
+| ID | Skenario | Langkah Pengujian | Data Uji | Hasil Diharapkan | Status |
+|---|---|---|---|---|---|
+| J-01 | Admin harga dapat membuka daftar survei | 1. Login sebagai Admin SSH 2. Buka menu Survei Harga | — | Halaman tampil (HTTP 200) | Lulus |
+| J-02 | Survei tersimpan atas nama pengguna yang login | 1. Login sebagai operator 2. Isi form survei 3. Simpan | Item SSH, vendor, harga 67.500 | Tersimpan; surveyor terisi pengguna yang login, terhubung ke item SSH yang benar | Lulus |
+| J-03 | Nama surveyor tidak bisa dipalsukan lewat form | 1. Kirim form survei sambil menyisipkan `surveyor_id` pengguna lain | `surveyor_id` milik Admin SSH | Surveyor tetap tercatat sebagai pengguna yang login | Lulus |
+| J-04 | Bukti survei tersimpan sebagai berkas | 1. Isi survei 2. Lampirkan foto daftar harga 3. Simpan | Berkas gambar | Baris bukti terbentuk dengan jenis yang dipilih; berkasnya benar-benar ada di penyimpanan | Lulus |
+| J-05 | Survei tanpa tanggal / berharga negatif ditolak | 1. Kirim form tanpa tanggal survei dan harga negatif | Harga −1 | Galat validasi pada `tanggal_survei` dan `harga`; data tidak tersimpan | Lulus |
+| J-06 | Menghapus survei ikut menghapus berkas buktinya | 1. Simpan survei berbukti 2. Hapus survei 3. Periksa penyimpanan | Survei dengan 1 berkas bukti | Baris survei, baris bukti, dan berkasnya hilang — tidak ada berkas tertinggal | Lulus |
+| J-07 | Operator tidak bisa menghapus survei milik orang lain | 1. Login sebagai operator 2. Hapus survei milik pengguna lain lewat URL | Survei milik Admin SSH | Ditolak (403); survei tetap ada | Lulus |
+| J-08 | Surveyor boleh menghapus survei buatannya sendiri | 1. Login sebagai operator 2. Hapus survei buatannya | Survei miliknya sendiri | Berhasil dihapus | Lulus |
+| J-09 | Admin harga boleh menghapus survei siapa pun | 1. Login sebagai Admin SSH 2. Hapus survei milik operator | Survei milik operator | Berhasil dihapus | Lulus |
+| J-10 | Daftar survei dapat disaring per item SSH | 1. Simpan survei untuk dua item berbeda 2. Saring berdasarkan satu item | Survei "Semen" & "Besi Beton" | Hanya survei item terpilih yang tampil | Lulus |
+| J-11 | Halaman detail survei menampilkan rekap harga | 1. Buka detail salah satu survei | 2 survei untuk item yang sama | Halaman tampil beserta rekapnya (HTTP 200) | Lulus |
+| J-12 | Median untuk jumlah data ganjil | 1. Hitung rekap atas 3 harga | 65.000; 70.000; 90.000 | Min 65.000; Maks 90.000; Median 70.000; Rata-rata 75.000 | Lulus |
+| J-13 | Median untuk jumlah data genap | 1. Hitung rekap atas 4 harga | 60.000; 70.000; 80.000; 100.000 | Median 75.000 (rata-rata dua nilai tengah); Rata-rata 77.500 | Lulus |
+| J-14 | Harga rekomendasi tahan terhadap harga nyeleneh | 1. Hitung rekap dengan satu penawaran ekstrem | 65.000; 66.000; 67.000; 5.000.000 | Rekomendasi 66.500 (median), lebih rendah daripada rata-rata yang tertarik ke atas | Lulus |
+| J-15 | Rekap tanpa data tidak menimbulkan galat | 1. Hitung rekap atas daftar kosong | Tidak ada survei | Seluruh nilai 0, bukan halaman galat | Lulus |
+| J-16 | Rekap per item hanya menghitung survei item itu | 1. Simpan survei untuk dua item 2. Hitung rekap salah satu item | 2 survei "Semen", 1 survei "Besi" berharga ekstrem | Rekap "Semen" hanya menghitung 2 survei miliknya | Lulus |
+| J-17 | Role tanpa kewenangan tidak bisa membuka survei | 1. Login sebagai Verifikator / Pimpinan / Admin HSPK 2. Buka menu Survei Harga | — | Ketiganya ditolak (403) | Lulus |
+| J-18 | Role tanpa kewenangan tidak bisa menyimpan survei lewat POST | 1. Login sebagai Verifikator 2. Kirim POST simpan survei | — | Ditolak (403); tidak ada survei tersimpan | Lulus |
+| J-19 | Tamu diarahkan ke halaman login | 1. Tanpa login, buka menu Survei Harga | — | Dialihkan ke `/login` | Lulus |
+
+## Modul K — Pemetaan Kode
+
+Berkas: `tests/Feature/PemetaanKodeTest.php`
+
+| ID | Skenario | Langkah Pengujian | Data Uji | Hasil Diharapkan | Status |
+|---|---|---|---|---|---|
+| K-01 | Pemetaan lengkap berstatus valid | 1. Simpan pemetaan kode aset + rekening + SIPD | Kode aset, rekening, dan kode SIPD terisi | Status `valid`; kolom waktu pemeriksaan terisi (bukti status dihitung ulang) | Lulus |
+| K-02 | Pemetaan tanpa kode rekening ditandai belum lengkap | 1. Simpan pemetaan tanpa kode rekening | Hanya kode aset | Status `belum_rekening` | Lulus |
+| K-03 | Dua pemetaan untuk kode aset sama ditandai duplikasi | 1. Simpan dua pemetaan untuk kode aset yang sama | Dua rekening berbeda | Kedua baris ditandai `duplikasi`, bukan hanya yang terakhir | Lulus |
+| K-04 | Kode aset yang belum dipetakan ikut terhitung | 1. Simpan dua kode aset tanpa pemetaan 2. Jalankan validasi | 2 kode aset | Ringkasan mencatat 2 "belum dipetakan", 0 valid | Lulus |
+| K-05 | Kode aset nonaktif tidak ikut dihitung | 1. Nonaktifkan kode aset 2. Jalankan validasi | Kode aset nonaktif tanpa pemetaan | Tidak dihitung sebagai belum dipetakan | Lulus |
+| K-06 | Melengkapi rekening mengubah status jadi valid | 1. Simpan pemetaan tanpa rekening 2. Sunting, isi rekening | Status awal `belum_rekening` | Status berubah menjadi `valid` | Lulus |
+| K-07 | Menghapus satu duplikat memulihkan status sisanya | 1. Buat dua pemetaan duplikat 2. Hapus salah satunya | Status awal keduanya `duplikasi` | Baris tersisa kembali berstatus `valid` | Lulus |
+| K-08 | Ringkasan validasi ditampilkan ke petugas | 1. Siapkan 1 pemetaan valid & 1 kode aset belum dipetakan 2. Jalankan validasi | — | Pesan berisi "1 valid, 0 belum ada rekening, 0 duplikasi, 1 kode aset belum dipetakan" | Lulus |
+| K-09 | Cek kode cepat: kode yang sudah dipetakan | 1. Cek kode aset yang sudah punya rekening | Kode aset terpetakan | Balasan JSON berstatus `valid` dengan label "Kode valid" | Lulus |
+| K-10 | Cek kode cepat: kode tidak terdaftar | 1. Cek kode yang tidak ada | `9.9.9.99.99.99.999` | Berstatus `tidak_ditemukan`; data kode aset kosong | Lulus |
+| K-11 | Cek kode cepat: terdaftar tetapi belum dipetakan | 1. Cek kode aset yang belum punya pemetaan | Kode aset baru | Berstatus `tidak_ditemukan`, namun data kode asetnya tetap dikembalikan | Lulus |
+| K-12 | Cek kode cepat menandai duplikasi | 1. Cek kode aset yang punya dua pemetaan | Kode aset terduplikasi | Berstatus `duplikasi` | Lulus |
+| K-13 | Cek kode wajib mengirim parameter kode | 1. Panggil cek kode tanpa parameter | — | Ditolak validasi (HTTP 422), bukan galat 500 | Lulus |
+| K-14 | Pemetaan ke kode aset tidak dikenal ditolak | 1. Simpan pemetaan dengan ID kode aset karangan | `asset_code_id = 999999` | Galat validasi pada `asset_code_id`; tidak ada pemetaan tersimpan | Lulus |
+| K-15 | Role tanpa kewenangan tidak bisa membuka/mengubah pemetaan | 1. Login sebagai Operator/Verifikator/Admin HSPK/Pimpinan 2. Buka & kirim POST pemetaan | — | Seluruhnya ditolak (403); tidak ada pemetaan tersimpan | Lulus |
+
+
 # BAGIAN II — KASUS UJI MANUAL (UAT)
 
 Modul berikut **belum tercakup pengujian otomatis** dan perlu diuji manual saat UAT.
@@ -213,13 +293,13 @@ Tanda **[W]** = wajib lulus sebagai syarat penerimaan.
 
 ## Modul H — Master Data (CRUD)
 
+> Modul ini **sudah tercakup pengujian otomatis** — lihat Bagian I, Modul H. Yang tersisa untuk
+> diuji manual pada UAT hanya hal yang bergantung pada penilaian pengguna di layar:
+
 | ID | Skenario | Langkah Pengujian | Data Uji | Hasil Diharapkan | Status |
 |---|---|---|---|---|---|
-| H-01 **[W]** | Tambah item SSH baru | 1. Login sebagai Admin SSH 2. Buka Master Data → SSH 3. Klik Tambah 4. Isi seluruh field wajib 5. Simpan | Kode "1.02.9001", Uraian "Cat Tembok 5 Kg", Satuan "Kaleng", Harga 185.000 | Data tersimpan, muncul pesan sukses, item tampil di daftar | |
-| H-02 **[W]** | Ubah harga item SSH | 1. Buka detail item hasil H-01 2. Ubah harga menjadi 195.000 3. Simpan | Harga 185.000 → 195.000 | Harga berubah; riwayat harga mencatat perubahan beserta penggunanya | |
-| H-03 | Tolak kode barang duplikat | 1. Tambah item SSH baru dengan kode yang sudah dipakai 2. Simpan | Kode "1.02.9001" (sudah ada) | Muncul galat "kode sudah digunakan"; data tidak tersimpan ganda | |
-| H-04 **[W]** | Nonaktifkan item | 1. Buka item aktif 2. Ubah status menjadi nonaktif 3. Simpan 4. Cek situs publik | Item hasil H-01 | Item hilang dari pencarian publik namun tetap tersimpan di basis data | |
-| H-05 | Pencarian & filter daftar master | 1. Buka daftar SSH 2. Cari kata kunci 3. Terapkan filter tahun/kategori | Kata kunci "Cat" | Hasil sesuai kata kunci & filter; jumlah data terlihat benar | |
+| H-M1 **[W]** | Item nonaktif hilang dari situs publik | 1. Nonaktifkan sebuah item SSH 2. Buka situs publik tanpa login 3. Cari item tersebut | Item SSH aktif | Item tidak muncul di pencarian publik, namun datanya tetap ada di back office | |
+| H-M2 | Pencarian & filter daftar master terasa benar | 1. Buka daftar SSH 2. Cari kata kunci 3. Terapkan filter tahun/kategori | Kata kunci "Cat" | Hasil sesuai kata kunci & filter; jumlah data terlihat wajar oleh petugas | |
 
 ## Modul I — Import & Export Excel
 
@@ -233,20 +313,26 @@ Tanda **[W]** = wajib lulus sebagai syarat penerimaan.
 
 ## Modul J — Survei Harga
 
-| ID | Skenario | Langkah Pengujian | Data Uji | Hasil Diharapkan | Status |
-|---|---|---|---|---|---|
-| J-01 **[W]** | Input hasil survei harga | 1. Login sebagai Surveyor/Operator 2. Buka Survei Harga 3. Tambah data survei 4. Simpan | Item SSH tertentu, 3 sumber harga berbeda | Data survei tersimpan dan terhubung ke item yang benar | |
-| J-02 | Unggah bukti survei | 1. Tambah survei 2. Lampirkan berkas bukti 3. Simpan | Berkas gambar/PDF | Lampiran tersimpan dan dapat dibuka kembali | |
-| J-03 | Analisis hasil survei | 1. Input ≥3 data survei untuk satu item 2. Buka analisis | 3 harga: 80.000; 82.000; 90.000 | Nilai rata-rata/median ditampilkan dan dapat dipertanggungjawabkan hitungannya | |
-
-## Modul K — Pemetaan Kode & Laporan
+> Modul ini **sudah tercakup pengujian otomatis** — lihat Bagian I, Modul J. Yang tersisa untuk
+> diuji manual pada UAT hanya yang bergantung pada peramban dan perangkat petugas lapangan:
 
 | ID | Skenario | Langkah Pengujian | Data Uji | Hasil Diharapkan | Status |
 |---|---|---|---|---|---|
-| K-01 **[W]** | Validasi pemetaan kode | 1. Buka menu Pemetaan Kode 2. Jalankan validasi | Data pemetaan yang ada | Item dengan pemetaan tidak lengkap/tidak valid ditandai jelas | |
-| K-02 | Dashboard menampilkan ringkasan benar | 1. Login 2. Buka Dashboard 3. Bandingkan angka ringkasan dengan jumlah data sebenarnya | — | Angka pada dashboard sama dengan jumlah data di masing-masing menu | |
-| K-03 **[W]** | Laporan perubahan harga | 1. Ubah harga beberapa item 2. Buka Laporan → Perubahan Harga | Minimal 2 perubahan harga | Seluruh perubahan tercatat lengkap beserta tanggal dan pelakunya | |
-| K-04 **[W]** | Jejak audit tidak dapat diubah pengguna | 1. Buka Audit Log 2. Cari opsi ubah/hapus entri | — | Tidak tersedia opsi ubah/hapus; entri hanya dapat dibaca | |
+| J-M1 **[W]** | Unggah bukti dari kamera ponsel | 1. Buka Survei Harga dari ponsel 2. Tambah survei 3. Ambil foto bukti langsung dari kamera 4. Simpan | Foto toko/daftar harga | Foto terunggah dan dapat dibuka kembali dengan jelas | |
+| J-M2 **[W]** | Angka rekomendasi dipahami petugas | 1. Input ≥3 data survei satu item 2. Buka rekapnya bersama petugas | 3 harga: 80.000; 82.000; 90.000 | Petugas memahami angka min/maks/median dan menyetujui median sebagai dasar rekomendasi | |
+
+## Modul K — Laporan, Dashboard & Jejak Audit
+
+> Validasi pemetaan kode kini **sudah tercakup pengujian otomatis** — lihat Bagian I, Modul K.
+> Yang tersisa di bawah ini adalah laporan dan jejak audit yang perlu dicocokkan dengan kebiasaan
+> instansi:
+
+| ID | Skenario | Langkah Pengujian | Data Uji | Hasil Diharapkan | Status |
+|---|---|---|---|---|---|
+| K-M1 **[W]** | Penandaan pemetaan bermasalah terbaca petugas | 1. Buka menu Pemetaan Kode 2. Jalankan validasi 3. Telaah daftar bersama petugas | Data pemetaan yang ada | Item bermasalah (belum ada rekening/duplikasi/belum dipetakan) mudah dikenali dan dipahami tindak lanjutnya | |
+| K-M2 | Dashboard menampilkan ringkasan benar | 1. Login 2. Buka Dashboard 3. Bandingkan angka ringkasan dengan jumlah data sebenarnya | — | Angka pada dashboard sama dengan jumlah data di masing-masing menu | |
+| K-M3 **[W]** | Laporan perubahan harga | 1. Ubah harga beberapa item 2. Buka Laporan → Perubahan Harga | Minimal 2 perubahan harga | Seluruh perubahan tercatat lengkap beserta tanggal dan pelakunya | |
+| K-M4 **[W]** | Jejak audit tidak dapat diubah pengguna | 1. Buka Audit Log 2. Cari opsi ubah/hapus entri | — | Tidak tersedia opsi ubah/hapus; entri hanya dapat dibaca | |
 
 ## Modul L — Antarmuka & Kenyamanan Pakai
 

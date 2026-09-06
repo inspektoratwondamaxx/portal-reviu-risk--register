@@ -54,7 +54,7 @@ Rincian langkah tiap skenario merujuk dokumen `Rencana dan Kasus Uji — SISHD`.
 
 ### 4.1 Modul Terverifikasi Otomatis
 
-Modul berikut telah diverifikasi melalui 60 kasus uji otomatis dengan hasil seluruhnya lulus.
+Modul berikut telah diverifikasi melalui 129 kasus uji otomatis dengan hasil seluruhnya lulus.
 Pengujian pada sesi UAT bersifat konfirmasi oleh perwakilan pengguna.
 
 | No | Modul / Fitur | Skenario Diuji | Hasil | Catatan |
@@ -69,22 +69,24 @@ Pengujian pada sesi UAT bersifat konfirmasi oleh perwakilan pengguna.
 | 8 | Approval Berjenjang | Usulan direvisi dan diajukan ulang dari tahap awal | | |
 | 9 | Kaskade Harga | Perubahan harga SSH mengubah HSPK terkait secara otomatis | | |
 | 10 | Situs Publik / API | Pencarian data harga tanpa login | | |
+| 11 | Master Data | Tambah/ubah item SSH, riwayat harga, dan penonaktifan item | | |
+| 12 | Import & Export Excel | Import per baris, templat, export biasa, dan export SIPD | | |
+| 13 | Survei Harga | Perekaman survei, bukti digital, dan angka rekomendasi | | |
+| 14 | Pemetaan Kode | Status pemetaan Kode Aset → Rekening → SIPD | | |
 
 ### 4.2 Modul Diuji Manual pada Sesi Ini
 
 | No | Modul / Fitur | Skenario Diuji | Hasil | Catatan |
 |---|---|---|---|---|
-| 11 | Master Data | Tambah dan ubah item SSH; riwayat harga tercatat | | |
-| 12 | Master Data | Nonaktifkan item; item hilang dari situs publik | | |
-| 13 | Import Excel | Import data master dari berkas sesuai templat | | |
-| 14 | Import Excel | Import berkas berisi baris bermasalah; galat dilaporkan per baris | | |
-| 15 | Export Excel | Export daftar data ke berkas `.xlsx` | | |
-| 16 | Export SIPD | Export dengan susunan kolom format SIPD | | |
-| 17 | Survei Harga | Input hasil survei beserta bukti pendukung | | |
-| 18 | Pemetaan Kode | Validasi kelengkapan pemetaan kode barang/rekening | | |
-| 19 | Laporan | Laporan perubahan harga dan jejak audit | | |
-| 20 | Dashboard | Kesesuaian angka ringkasan dengan data sebenarnya | | |
-| 21 | Antarmuka | Tampilan pada perangkat ponsel dan kejelasan istilah | | |
+| 15 | Master Data | Item nonaktif tidak lagi muncul di situs publik | | |
+| 16 | Import Excel | Unggah berkas selain Excel ditolak dengan pesan yang jelas | | |
+| 17 | Export SIPD | Susunan kolom sesuai templat SIPD yang berlaku di instansi | | |
+| 18 | Survei Harga | Unggah bukti langsung dari kamera ponsel | | |
+| 19 | Survei Harga | Angka rekomendasi (median) dipahami dan disetujui petugas | | |
+| 20 | Pemetaan Kode | Penandaan pemetaan bermasalah mudah dibaca dan ditindaklanjuti | | |
+| 21 | Laporan | Laporan perubahan harga dan jejak audit | | |
+| 22 | Dashboard | Kesesuaian angka ringkasan dengan data sebenarnya | | |
+| 23 | Antarmuka | Tampilan pada perangkat ponsel dan kejelasan istilah | | |
 
 ### 4.3 Rekapitulasi
 

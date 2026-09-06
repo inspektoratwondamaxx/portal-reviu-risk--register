@@ -11,6 +11,7 @@ use App\Models\SbuItem;
 use App\Models\SshItem;
 use App\Models\TahunAnggaran;
 use App\Services\HspkCalculationService;
+use App\Services\KodeGenerator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -44,7 +45,7 @@ class HspkController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, KodeGenerator $kodeGenerator): RedirectResponse
     {
         $validated = $request->validate([
             'kode' => ['nullable', 'string', 'max:30', 'unique:hspk,kode'],
@@ -56,7 +57,7 @@ class HspkController extends Controller
         ]);
 
         $item = Hspk::create($validated + [
-            'kode' => $validated['kode'] ?: 'HSPK-'.now()->format('ymd').'-'.str_pad((string) ((Hspk::max('id') ?? 0) + 1), 4, '0', STR_PAD_LEFT),
+            'kode' => ($validated['kode'] ?? null) ?: $kodeGenerator->next(Hspk::class, 'kode', 'HSPK'),
             'status' => ItemStatus::Aktif->value,
             'is_active' => true,
             'created_by' => Auth::id(),

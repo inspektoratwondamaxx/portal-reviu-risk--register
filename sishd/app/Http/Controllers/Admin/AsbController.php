@@ -13,6 +13,7 @@ use App\Models\SshItem;
 use App\Models\TahunAnggaran;
 use App\Services\AsbCalculationService;
 use App\Services\FormulaEvaluationException;
+use App\Services\KodeGenerator;
 use App\Services\SafeFormulaEvaluator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -46,7 +47,7 @@ class AsbController extends Controller
         return view('admin.asb.form', ['item' => new Asb, 'tahunList' => TahunAnggaran::orderByDesc('tahun')->get()]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, KodeGenerator $kodeGenerator): RedirectResponse
     {
         $validated = $request->validate([
             'kode' => ['nullable', 'string', 'max:30', 'unique:asb,kode'],
@@ -60,7 +61,7 @@ class AsbController extends Controller
         ]);
 
         $item = Asb::create($validated + [
-            'kode' => $validated['kode'] ?: 'ASB-'.now()->format('ymd').'-'.str_pad((string) ((Asb::max('id') ?? 0) + 1), 4, '0', STR_PAD_LEFT),
+            'kode' => ($validated['kode'] ?? null) ?: $kodeGenerator->next(Asb::class, 'kode', 'ASB'),
             'status' => ItemStatus::Aktif->value,
             'is_active' => true,
             'created_by' => Auth::id(),

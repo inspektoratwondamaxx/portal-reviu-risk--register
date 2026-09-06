@@ -9,6 +9,7 @@ use App\Models\Category;
 use App\Models\SshItem;
 use App\Models\TahunAnggaran;
 use App\Services\DuplicateDetectionService;
+use App\Services\KodeGenerator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -56,12 +57,12 @@ class SshItemController extends Controller
         ]);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, KodeGenerator $kodeGenerator): RedirectResponse
     {
         $validated = $this->validated($request);
 
         $item = SshItem::create($validated + [
-            'kode_barang' => $validated['kode_barang'] ?: $this->generateKode(),
+            'kode_barang' => ($validated['kode_barang'] ?? null) ?: $kodeGenerator->next(SshItem::class, 'kode_barang', 'SSH'),
             'status' => ItemStatus::Aktif->value,
             'is_active' => true,
             'created_by' => Auth::id(),
@@ -130,12 +131,5 @@ class SshItemController extends Controller
             'sumber_harga' => ['nullable', 'string', 'max:255'],
             'keterangan' => ['nullable', 'string'],
         ]);
-    }
-
-    private function generateKode(): string
-    {
-        $next = (SshItem::max('id') ?? 0) + 1;
-
-        return 'SSH-'.now()->format('ymd').'-'.str_pad((string) $next, 4, '0', STR_PAD_LEFT);
     }
 }

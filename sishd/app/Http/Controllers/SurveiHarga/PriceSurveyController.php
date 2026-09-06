@@ -88,8 +88,20 @@ class PriceSurveyController extends Controller
         ]);
     }
 
+    /**
+     * Survei harga adalah bukti dasar penetapan harga, jadi penghapusannya dibatasi: hanya
+     * surveyornya sendiri (mengoreksi entrinya) atau admin harga. Tanpa batas ini, operator OPD
+     * mana pun bisa menghapus survei beserta berkas buktinya milik OPD lain hanya dengan menebak
+     * URL-nya — kehilangan yang tidak bisa dipulihkan dan tidak menyisakan jejak.
+     */
     public function destroy(PriceSurvey $priceSurvey): RedirectResponse
     {
+        $user = Auth::user();
+        abort_unless(
+            $user->isSuperAdmin() || $user->hasRole('admin_ssh') || $priceSurvey->surveyor_id === $user->id,
+            403
+        );
+
         foreach ($priceSurvey->evidence as $evidence) {
             Storage::disk('public')->delete($evidence->file_path);
         }
