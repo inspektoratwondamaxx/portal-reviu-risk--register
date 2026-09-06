@@ -10,15 +10,16 @@
 
 ## 1. Ringkasan Eksekutif
 
-Pengujian otomatis atas 129 kasus uji pada sebelas modul SISHD dijalankan dan **seluruhnya lulus
-(100%)** dengan 409 titik pemeriksaan (assertion), tanpa kegagalan tersisa. Modul yang telah
-tercakup adalah bagian sistem yang paling berisiko bila keliru: batas akses antar-OPD dan
-antar-role, rantai persetujuan berjenjang, pemetaan data usulan ke data induk, kaskade
-perhitungan harga, evaluasi formula ASB, import/export Excel sebagai satu-satunya jalur yang
-menerima berkas dari luar sistem, serta — sejak siklus ini — CRUD master data, survei harga, dan
-pemetaan kode yang sebelumnya hanya mengandalkan pengujian manual.
+Pengujian otomatis atas 148 kasus uji pada dua belas modul SISHD dijalankan dan **seluruhnya lulus
+(100%)** dengan 465 titik pemeriksaan (assertion), tanpa kegagalan tersisa. Dengan siklus ini
+**seluruh modul fungsional sistem telah tercakup pengujian otomatis** — tidak ada lagi modul yang
+sepenuhnya bergantung pada pengujian manual. Cakupannya meliputi batas akses antar-OPD dan
+antar-role, rantai persetujuan berjenjang, pemetaan data usulan ke data induk, kaskade perhitungan
+harga, evaluasi formula ASB, import/export Excel sebagai satu-satunya jalur yang menerima berkas
+dari luar sistem, CRUD master data, survei harga, pemetaan kode, serta laporan, angka dashboard,
+dan jejak audit.
 
-Selama seluruh siklus pengujian ditemukan **9 cacat**, seluruhnya telah diperbaiki dan
+Selama seluruh siklus pengujian ditemukan **10 cacat**, seluruhnya telah diperbaiki dan
 diverifikasi ulang. Empat di antaranya berkategori Tinggi dan tidak terlihat melalui pemakaian
 normal lewat peramban — semuanya baru terungkap justru karena pengujian otomatis dan pengujian
 batas dijalankan. Satu di antaranya (T-05) bahkan bersifat **acak**: baris yang gagal
@@ -26,11 +27,17 @@ berpindah-pindah setiap kali import dijalankan, sehingga hampir mustahil ditemuk
 manual sekali jalan. Karena itu rangkaian pengujian dijalankan tiga kali berturut-turut untuk
 memastikan perbaikannya benar-benar stabil, bukan kebetulan lolos.
 
+Perlu dicatat bahwa dua cacat (T-04 dan T-10) adalah **kekeliruan yang sama persis di dua tempat
+berbeda**: filter tahun yang diam-diam diabaikan ketika tahun yang diminta tidak ada dalam data,
+sehingga sistem menampilkan seluruh tahun di bawah judul satu tahun tertentu. Pada laporan rekap
+(T-10) ini berarti angka yang dipakai sebagai dasar pengambilan keputusan bisa salah tanpa satu
+pun pesan galat.
+
 **Rekomendasi**: sistem **layak dilanjutkan ke tahap User Acceptance Testing (UAT)** bersama
 perwakilan pengguna. Belum direkomendasikan langsung ke produksi sebelum kasus uji manual bertanda
 wajib pada Bagian II dokumen rujukan dinyatakan lulus — kini tersisa hal-hal yang memang menuntut
 penilaian manusia (kesesuaian format SIPD instansi, unggah bukti dari kamera ponsel, keterbacaan
-laporan dan jejak audit), bukan lagi keseluruhan modul.
+laporan dan tampilan pada ponsel), bukan lagi cakupan fungsional yang belum teruji.
 
 ## 2. Ruang Lingkup dan Metodologi
 
@@ -50,7 +57,7 @@ data induk setelah seluruh tahap persetujuan terlampaui.
 | Basis data pengujian | `sishd_test` (terpisah dari basis data pengembangan) |
 | Alat uji | PHPUnit via `php artisan test` |
 | Otomasi berkelanjutan | GitHub Actions (`.github/workflows/sishd-tests.yml`) |
-| Waktu eksekusi | ± 13 detik untuk seluruh rangkaian |
+| Waktu eksekusi | ± 15 detik untuk seluruh rangkaian |
 
 ## 3. Ringkasan Statistik
 
@@ -67,8 +74,9 @@ data induk setelah seluruh tahap persetujuan terlampaui.
 | I | Import & Export Excel | 15 | 15 | 0 | 0 | 100% |
 | J | Survei Harga | 19 | 19 | 0 | 0 | 100% |
 | K | Pemetaan Kode | 15 | 15 | 0 | 0 | 100% |
-| **Total otomatis** | | **129** | **129** | **0** | **0** | **100%** |
-| Sisa manual (UAT) | Laporan, dashboard, jejak audit, tampilan, format SIPD | 13 | – | – | 13 | Menunggu UAT |
+| M | Laporan, Dashboard & Jejak Audit | 19 | 19 | 0 | 0 | 100% |
+| **Total otomatis** | | **148** | **148** | **0** | **0** | **100%** |
+| Sisa manual (UAT) | Keterbacaan laporan, tampilan ponsel, istilah, format SIPD | 12 | – | – | 12 | Menunggu UAT |
 
 ## 4. Daftar Temuan
 
@@ -85,6 +93,7 @@ Seluruh temuan di bawah ini ditemukan **dan** diperbaiki dalam siklus pengembang
 | T-07 | Menyimpan master data **tanpa mengisi kolom kode** menyebabkan halaman galat (HTTP 500), bukan pembuatan kode otomatis, karena kolom opsional yang tidak dikirim sama sekali tidak ikut dikembalikan oleh validator lalu tetap dibaca. Terjadi pada keempat jenis master (SSH, SBU, HSPK, ASB). Lewat form bawaan aplikasi kolomnya selalu ikut terkirim sehingga tidak terlihat, namun setiap pemanggilan dari luar form (integrasi, skrip, atau form yang menyembunyikan kolom kode) akan gagal. | **Sedang** | H — Master Data | Selesai diperbaiki |
 | T-08 | Kode otomatis (`SSH-yymmdd-NNNN` dan sejenisnya) dihitung hanya dari nomor id terbesar, tanpa memeriksa apakah kode itu sudah terpakai. Bila petugas pernah mengetik kode manual dengan format yang sama — hal yang wajar karena ia menyalin pola dari baris lain — penyimpanan berikutnya bentrok pada kolom UNIQUE dan berakhir sebagai halaman galat dengan data batal tersimpan. Terbukti dapat direproduksi dari antarmuka biasa. Perbaikannya menyatukan pembuatan kode master dan kode import ke satu layanan bersama yang menaikkan nomor sampai benar-benar belum terpakai. | **Tinggi** | H — Master Data | Selesai diperbaiki |
 | T-09 | Penghapusan data survei harga tidak memeriksa kepemilikan: operator OPD mana pun dapat menghapus survei milik pengguna lain beserta seluruh berkas buktinya hanya dengan menebak URL-nya. Karena survei adalah bukti dasar penetapan harga dan berkasnya ikut terhapus permanen, kehilangan ini tidak dapat dipulihkan. Kini dibatasi pada surveyor pembuatnya sendiri atau admin harga (Super Admin/Admin SSH). | **Tinggi** | J — Survei Harga | Selesai diperbaiki |
+| T-10 | Laporan rekap yang difilter ke tahun anggaran yang tidak ada dalam data **mengabaikan filternya** dan menjumlahkan seluruh tahun, ditampilkan di bawah judul tahun yang diminta. Kekeliruan yang sama persis dengan T-04 pada API publik, kali ini pada laporan yang dipakai sebagai dasar pengambilan keputusan — angkanya salah tanpa satu pun pesan galat, sehingga tidak ada yang memicu kecurigaan pembacanya. | **Sedang** | M — Laporan | Selesai diperbaiki |
 
 ### Catatan kualitas kode (bukan cacat fungsional)
 
@@ -100,7 +109,7 @@ Seluruh temuan di bawah ini ditemukan **dan** diperbaiki dalam siklus pengembang
 
 | No | Risiko | Dampak | Saran Penanganan |
 |---|---|---|---|
-| 1 | Dashboard, laporan perubahan harga, dan tampilan jejak audit belum tercakup pengujian otomatis | Perubahan kode di masa depan dapat merusak tampilan laporan tanpa terdeteksi | Uji manual pada UAT (Bagian II dokumen rujukan); tambahkan pengujian otomatis pada iterasi berikutnya. Survei harga, pemetaan kode, dan CRUD master data yang sebelumnya menjadi prioritas kini sudah tercakup (Modul H, J, K) |
+| 1 | Yang tersisa tanpa pengujian otomatis hanyalah hal yang memang menuntut penilaian manusia: keterbacaan laporan, tampilan pada ponsel, kesesuaian istilah, dan kecocokan format export dengan templat SIPD instansi | Ketidakcocokan baru diketahui saat dipakai pengguna sebenarnya | Uji manual pada UAT (Bagian II dokumen rujukan). Seluruh modul fungsional — termasuk laporan, dashboard, dan jejak audit — kini sudah tercakup pengujian otomatis (Modul A–M) |
 | 2 | Data yang diuji adalah data contoh, bukan data harga riil daerah | Perilaku pada volume dan variasi data sebenarnya belum terbukti | Lakukan uji coba memakai cuplikan data riil sebelum peluncuran |
 | 3 | Belum ada pengujian beban (jumlah pengguna/data besar) | Kinerja saat dipakai serentak banyak OPD belum diketahui | Lakukan pengujian beban terpisah, terutama pada proses import dan export data besar |
 | 4 | Integrasi SIPD Level 2 (tulis) belum tersedia | Pertukaran data dengan SIPD masih manual lewat Excel | Menunggu spesifikasi resmi API SIPD; endpoint baca-saja sudah tersedia sebagai fondasi |

@@ -23,7 +23,7 @@ Pengujian mencakup modul-modul berikut:
 | H | Master Data (CRUD) | CRUD SSH/SBU/HSPK/ASB, kode otomatis, riwayat harga, nonaktifkan/aktifkan |
 | J | Survei Harga | Perekaman survei lapangan, bukti digital, rekap statistik harga |
 | K | Pemetaan Kode | Kode Aset → Kode Rekening → Kode SIPD beserta status validasinya |
-| G | Laporan & Pendukung | Dashboard, laporan perubahan harga, jejak audit |
+| M | Laporan, Dashboard & Jejak Audit | Rekap per jenis, laporan perubahan harga, angka dashboard, audit log |
 
 **Di luar cakupan**: pengujian beban/kinerja (load testing), pengujian penetrasi keamanan mendalam,
 dan pengujian kompatibilitas lintas peramban. Ketiganya disarankan sebagai kegiatan terpisah.
@@ -186,30 +186,6 @@ Berkas: `tests/Feature/ExampleTest.php`, `tests/Unit/ExampleTest.php`
 | G-01 | Halaman depan dapat diakses | Panggil `GET /` | — | HTTP 200 | Lulus |
 | G-02 | Kerangka pengujian berjalan | Jalankan pengujian unit dasar | — | Lulus | Lulus |
 
-## Modul I — Import & Export Excel
-
-Berkas: `tests/Feature/ImportExportTest.php`
-
-| ID | Skenario | Langkah Pengujian | Data Uji | Hasil Diharapkan | Status |
-|---|---|---|---|---|---|
-| I-01 | Seluruh baris valid masuk tanpa ada yang gagal | 1. Siapkan berkas 60 baris valid 2. Jalankan import SSH 3. Periksa ringkasan | 60 baris: uraian, satuan "Unit", harga 10.001–10.060 | 60 sukses, 0 gagal, 60 item di master, status "selesai" | Lulus |
-| I-02 | Kode barang hasil import unik | 1. Import 40 baris valid 2. Bandingkan seluruh kode barang | 40 baris valid | Tidak ada kode barang kembar | Lulus |
-| I-03 | Import ulang di hari yang sama tetap berhasil | 1. Import berkas 15 baris 2. Import berkas yang sama lagi | Berkas sama, dua kali | Kedua import 0 gagal; 30 item; 30 kode unik | Lulus |
-| I-04 | Baris bermasalah dilaporkan beserta nomor barisnya | 1. Import berkas campuran valid & tidak valid | 2 valid + 1 tanpa uraian + 1 tanpa satuan | 2 sukses, 2 gagal, status "selesai", galat menyebut "Baris 3" dan "Baris 4" | Lulus |
-| I-05 | Berkas yang seluruh barisnya bermasalah berstatus gagal | 1. Import berkas yang semua barisnya tidak valid | 2 baris tanpa uraian | 0 sukses, 2 gagal, status "gagal", master tidak bertambah | Lulus |
-| I-06 | Baris kosong di tengah berkas diabaikan | 1. Import berkas dengan baris kosong di tengah | Baris data, baris kosong, baris data | Total baris dihitung 2 (bukan 3), 2 sukses | Lulus |
-| I-07 | Import tercatat atas nama penggunanya | 1. Import sebagai Admin SSH 2. Periksa catatan import | 2 baris valid | `user_id`, jenis "ssh", nama berkas, dan `created_by` item tercatat benar | Lulus |
-| I-08 | Import SBU memakai kode dari berkas bila diisi | 1. Import SBU dengan kolom kode terisi | Kode "SBU-UJI-001", besaran 900.000 | Item tersimpan dengan kode & besaran sesuai berkas | Lulus |
-| I-09 | Import SBU tanpa kode tidak bentrok antar berkas | 1. Import berkas A tanpa kolom kode 2. Import berkas B dengan isi sama | Dua berkas, masing-masing 2 baris | Keduanya 0 gagal; 4 item; 4 kode unik | Lulus |
-| I-10 | Import SBU menolak baris tanpa besaran | 1. Import SBU dengan besaran dikosongkan | 1 baris tanpa besaran | 0 sukses, 1 gagal, master tidak bertambah | Lulus |
-| I-11 | Judul kolom templat sama dengan yang dibaca importer | 1. Unduh templat SSH & SBU 2. Bandingkan judul kolomnya dengan definisi importer | Templat SSH & SBU | Judul kolom sama persis untuk kedua jenis | Lulus |
-| I-12 | Templat SSH bisa langsung diimpor kembali | 1. Unduh templat SSH 2. Import berkas templat itu apa adanya | Templat beserta baris contohnya | 1 baris terbaca, 0 gagal (baris contoh valid) | Lulus |
-| I-13 | Export SSH berisi data dan judul kolom | 1. Siapkan 1 item SSH 2. Jalankan export 3. Buka berkasnya | Kode "EXP-0001", harga 82.000 | Berkas ada; judul kolom "Kode Barang"; baris data sesuai isi master | Lulus |
-| I-14 | Export tanpa data tetap menghasilkan berkas | 1. Jalankan export saat master kosong | Master tanpa data | Berkas tetap terbentuk berisi judul kolom saja — bukan galat | Lulus |
-| I-15 | Export SBU dan format SIPD menghasilkan berkas | 1. Siapkan 1 item SBU 2. Jalankan export SBU dan export SIPD | Kode "SBU-EXP-1" | Kedua berkas terbentuk; export tercatat atas nama penggunanya | Lulus |
-
----
-
 ## Modul H — Master Data (CRUD SSH/SBU/HSPK/ASB)
 
 Berkas: `tests/Feature/MasterDataCrudTest.php`
@@ -236,6 +212,30 @@ Berkas: `tests/Feature/MasterDataCrudTest.php`
 | H-18 | Admin SSH tidak bisa menyunting master HSPK/ASB | 1. Login sebagai Admin SSH 2. Buka menu HSPK 3. Kirim POST pembuatan ASB | — | Keduanya ditolak (403); tidak ada ASB terbentuk | Lulus |
 | H-19 | Admin HSPK/ASB tidak bisa menyunting master SSH/SBU | 1. Login sebagai Admin HSPK/ASB 2. Buka menu SSH 3. Kirim POST pembuatan SSH | — | Keduanya ditolak (403); tidak ada SSH terbentuk | Lulus |
 | H-20 | Operator OPD tidak bisa mengubah master data | 1. Login sebagai operator 2. Kirim PUT perubahan harga item SSH | Harga diubah menjadi 1 | Ditolak (403); harga item tidak berubah | Lulus |
+
+## Modul I — Import & Export Excel
+
+Berkas: `tests/Feature/ImportExportTest.php`
+
+| ID | Skenario | Langkah Pengujian | Data Uji | Hasil Diharapkan | Status |
+|---|---|---|---|---|---|
+| I-01 | Seluruh baris valid masuk tanpa ada yang gagal | 1. Siapkan berkas 60 baris valid 2. Jalankan import SSH 3. Periksa ringkasan | 60 baris: uraian, satuan "Unit", harga 10.001–10.060 | 60 sukses, 0 gagal, 60 item di master, status "selesai" | Lulus |
+| I-02 | Kode barang hasil import unik | 1. Import 40 baris valid 2. Bandingkan seluruh kode barang | 40 baris valid | Tidak ada kode barang kembar | Lulus |
+| I-03 | Import ulang di hari yang sama tetap berhasil | 1. Import berkas 15 baris 2. Import berkas yang sama lagi | Berkas sama, dua kali | Kedua import 0 gagal; 30 item; 30 kode unik | Lulus |
+| I-04 | Baris bermasalah dilaporkan beserta nomor barisnya | 1. Import berkas campuran valid & tidak valid | 2 valid + 1 tanpa uraian + 1 tanpa satuan | 2 sukses, 2 gagal, status "selesai", galat menyebut "Baris 3" dan "Baris 4" | Lulus |
+| I-05 | Berkas yang seluruh barisnya bermasalah berstatus gagal | 1. Import berkas yang semua barisnya tidak valid | 2 baris tanpa uraian | 0 sukses, 2 gagal, status "gagal", master tidak bertambah | Lulus |
+| I-06 | Baris kosong di tengah berkas diabaikan | 1. Import berkas dengan baris kosong di tengah | Baris data, baris kosong, baris data | Total baris dihitung 2 (bukan 3), 2 sukses | Lulus |
+| I-07 | Import tercatat atas nama penggunanya | 1. Import sebagai Admin SSH 2. Periksa catatan import | 2 baris valid | `user_id`, jenis "ssh", nama berkas, dan `created_by` item tercatat benar | Lulus |
+| I-08 | Import SBU memakai kode dari berkas bila diisi | 1. Import SBU dengan kolom kode terisi | Kode "SBU-UJI-001", besaran 900.000 | Item tersimpan dengan kode & besaran sesuai berkas | Lulus |
+| I-09 | Import SBU tanpa kode tidak bentrok antar berkas | 1. Import berkas A tanpa kolom kode 2. Import berkas B dengan isi sama | Dua berkas, masing-masing 2 baris | Keduanya 0 gagal; 4 item; 4 kode unik | Lulus |
+| I-10 | Import SBU menolak baris tanpa besaran | 1. Import SBU dengan besaran dikosongkan | 1 baris tanpa besaran | 0 sukses, 1 gagal, master tidak bertambah | Lulus |
+| I-11 | Judul kolom templat sama dengan yang dibaca importer | 1. Unduh templat SSH & SBU 2. Bandingkan judul kolomnya dengan definisi importer | Templat SSH & SBU | Judul kolom sama persis untuk kedua jenis | Lulus |
+| I-12 | Templat SSH bisa langsung diimpor kembali | 1. Unduh templat SSH 2. Import berkas templat itu apa adanya | Templat beserta baris contohnya | 1 baris terbaca, 0 gagal (baris contoh valid) | Lulus |
+| I-13 | Export SSH berisi data dan judul kolom | 1. Siapkan 1 item SSH 2. Jalankan export 3. Buka berkasnya | Kode "EXP-0001", harga 82.000 | Berkas ada; judul kolom "Kode Barang"; baris data sesuai isi master | Lulus |
+| I-14 | Export tanpa data tetap menghasilkan berkas | 1. Jalankan export saat master kosong | Master tanpa data | Berkas tetap terbentuk berisi judul kolom saja — bukan galat | Lulus |
+| I-15 | Export SBU dan format SIPD menghasilkan berkas | 1. Siapkan 1 item SBU 2. Jalankan export SBU dan export SIPD | Kode "SBU-EXP-1" | Kedua berkas terbentuk; export tercatat atas nama penggunanya | Lulus |
+
+---
 
 ## Modul J — Survei Harga
 
@@ -286,6 +286,33 @@ Berkas: `tests/Feature/PemetaanKodeTest.php`
 | K-15 | Role tanpa kewenangan tidak bisa membuka/mengubah pemetaan | 1. Login sebagai Operator/Verifikator/Admin HSPK/Pimpinan 2. Buka & kirim POST pemetaan | — | Seluruhnya ditolak (403); tidak ada pemetaan tersimpan | Lulus |
 
 
+## Modul M — Laporan, Dashboard & Jejak Audit
+
+Berkas: `tests/Feature/LaporanDashboardTest.php`
+
+| ID | Skenario | Langkah Pengujian | Data Uji | Hasil Diharapkan | Status |
+|---|---|---|---|---|---|
+| M-01 | Rekap SSH menjumlahkan harga seluruh item | 1. Simpan dua item SSH 2. Buka Laporan → Rekap SSH | Rp65.000 dan Rp35.000 | Total tampil Rp100.000 | Lulus |
+| M-02 | Rekap tahun yang tidak ada menghasilkan nol baris | 1. Buka rekap dengan filter tahun yang tidak ada di data | `tahun = 2099` | Tidak ada baris; filter tetap diterapkan, bukan diabaikan lalu menjumlahkan seluruh tahun | Lulus |
+| M-03 | Rekap tahun tertentu hanya menghitung tahun itu | 1. Simpan item pada TA 2026 dan TA 2025 2. Rekap difilter TA 2025 | Rp65.000 (2026), Rp41.000 (2025) | Hanya Rp41.000 yang tampil | Lulus |
+| M-04 | Rekap SBU dikelompokkan per kategori | 1. Simpan SBU kategori honorarium 2. Buka rekap SBU | Honorarium Rp900.000 | Baris dikelompokkan menurut kategori | Lulus |
+| M-05 | Jenis laporan di luar daftar ditolak | 1. Buka rekap dengan jenis karangan | `jenis = "jenis-karangan"` | Ditolak (HTTP 404), bukan galat 500 | Lulus |
+| M-06 | Laporan perubahan harga menampilkan harga lama, baru & pelakunya | 1. Ubah harga item SSH beserta dasar perubahan 2. Buka Laporan → Perubahan Harga | 65.000 → 71.500 | Tampil harga lama, harga baru, nama pengubah, dan dasar perubahan | Lulus |
+| M-07 | Laporan perubahan harga disaring per jenis | 1. Siapkan riwayat SSH dan SBU 2. Saring jenis SSH | 2 riwayat beda jenis | Hanya riwayat SSH yang tampil | Lulus |
+| M-08 | Laporan perubahan harga disaring per rentang tanggal | 1. Siapkan riwayat Januari & Maret 2. Saring 1–31 Maret | 2 riwayat beda bulan | Hanya riwayat Maret yang tampil | Lulus |
+| M-09 | Dashboard hanya menghitung data aktif | 1. Simpan 3 item SSH 2. Nonaktifkan satu 3. Buka Dashboard | 2 aktif, 1 nonaktif | Angka ringkasan SSH = 2, bukan 3 | Lulus |
+| M-10 | Dashboard operator hanya menghitung usulan OPD sendiri | 1. Siapkan usulan dari 2 OPD 2. Buka Dashboard sebagai operator lalu sebagai Super Admin | 1 usulan tiap OPD | Operator melihat 1; Super Admin melihat 2 | Lulus |
+| M-11 | Dashboard tanpa data tidak membagi dengan nol | 1. Buka Dashboard pada basis data kosong | Tidak ada data master | Persentase bernilai 0, bukan halaman galat | Lulus |
+| M-12 | Dashboard dapat dibuka seluruh role | 1. Login sebagai tiap role 2. Buka Dashboard | 5 role termasuk Pimpinan | Seluruhnya tampil (HTTP 200) | Lulus |
+| M-13 | Perubahan master data tercatat di jejak audit | 1. Ubah uraian item SSH 2. Periksa audit log | "Barang SSH-A1" → "Nama Barang Setelah Diubah" | Tercatat pelaku, nilai sebelum, dan nilai sesudah | Lulus |
+| M-14 | Menyimpan tanpa perubahan tidak membuat catatan kosong | 1. Simpan ulang item tanpa mengubah apa pun | Data identik | Jumlah catatan audit tidak bertambah | Lulus |
+| M-15 | Jejak audit hanya bisa dibaca | 1. Buka Audit Log 2. Telusuri seluruh rute yang menyentuh audit-log | — | Hanya tersedia metode GET/HEAD; tidak ada jalur ubah/hapus sama sekali di level server | Lulus |
+| M-16 | Jejak audit dapat disaring per aksi | 1. Buat lalu ubah item 2. Saring aksi "created" | Catatan created & updated | Hanya catatan bertipe `created` yang tampil | Lulus |
+| M-17 | Operator & Pimpinan tidak bisa membuka laporan | 1. Login sebagai operator/Pimpinan 2. Buka rekap dan perubahan harga | — | Seluruhnya ditolak (403) | Lulus |
+| M-18 | Hanya Super Admin yang bisa membuka jejak audit | 1. Login sebagai Admin SSH/Verifikator/Operator/Pimpinan 2. Buka Audit Log | — | Seluruhnya ditolak (403) | Lulus |
+| M-19 | Tamu tidak bisa membuka laporan maupun dashboard | 1. Tanpa login, buka Dashboard, Perubahan Harga, dan Audit Log | — | Ketiganya dialihkan ke `/login` | Lulus |
+
+
 # BAGIAN II — KASUS UJI MANUAL (UAT)
 
 Modul berikut **belum tercakup pengujian otomatis** dan perlu diuji manual saat UAT.
@@ -323,16 +350,15 @@ Tanda **[W]** = wajib lulus sebagai syarat penerimaan.
 
 ## Modul K — Laporan, Dashboard & Jejak Audit
 
-> Validasi pemetaan kode kini **sudah tercakup pengujian otomatis** — lihat Bagian I, Modul K.
-> Yang tersisa di bawah ini adalah laporan dan jejak audit yang perlu dicocokkan dengan kebiasaan
-> instansi:
+> Pemetaan kode, laporan, dashboard, dan jejak audit kini **sudah tercakup pengujian otomatis** —
+> lihat Bagian I, Modul K dan Modul M. Yang tersisa di bawah ini hanya yang menuntut penilaian
+> manusia terhadap keterbacaan dan kesesuaian dengan kebiasaan instansi:
 
 | ID | Skenario | Langkah Pengujian | Data Uji | Hasil Diharapkan | Status |
 |---|---|---|---|---|---|
 | K-M1 **[W]** | Penandaan pemetaan bermasalah terbaca petugas | 1. Buka menu Pemetaan Kode 2. Jalankan validasi 3. Telaah daftar bersama petugas | Data pemetaan yang ada | Item bermasalah (belum ada rekening/duplikasi/belum dipetakan) mudah dikenali dan dipahami tindak lanjutnya | |
-| K-M2 | Dashboard menampilkan ringkasan benar | 1. Login 2. Buka Dashboard 3. Bandingkan angka ringkasan dengan jumlah data sebenarnya | — | Angka pada dashboard sama dengan jumlah data di masing-masing menu | |
-| K-M3 **[W]** | Laporan perubahan harga | 1. Ubah harga beberapa item 2. Buka Laporan → Perubahan Harga | Minimal 2 perubahan harga | Seluruh perubahan tercatat lengkap beserta tanggal dan pelakunya | |
-| K-M4 **[W]** | Jejak audit tidak dapat diubah pengguna | 1. Buka Audit Log 2. Cari opsi ubah/hapus entri | — | Tidak tersedia opsi ubah/hapus; entri hanya dapat dibaca | |
+| K-M2 | Laporan siap dipakai untuk keperluan administrasi | 1. Buka Laporan → Rekap dan Perubahan Harga 2. Cetak/simpan bersama petugas | Minimal 2 perubahan harga | Susunan kolom dan tampilan cetaknya memadai sebagai lampiran dokumen instansi | |
+| K-M3 | Angka dashboard dipahami pimpinan | 1. Buka Dashboard bersama perwakilan pimpinan 2. Telaah kartu ringkasan dan grafiknya | — | Informasi yang ditampilkan sesuai yang dibutuhkan pimpinan untuk memantau, tanpa perlu masuk menu teknis | |
 
 ## Modul L — Antarmuka & Kenyamanan Pakai
 

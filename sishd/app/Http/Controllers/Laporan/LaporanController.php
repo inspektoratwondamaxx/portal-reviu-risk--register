@@ -19,7 +19,7 @@ class LaporanController extends Controller
     {
         abort_unless(in_array($jenis, ['ssh', 'sbu', 'hspk', 'asb'], true), 404);
 
-        $tahunId = $request->filled('tahun') ? TahunAnggaran::where('tahun', $request->integer('tahun'))->value('id') : null;
+        $tahunId = $this->resolveTahunId($request);
 
         $query = match ($jenis) {
             'sbu' => SbuItem::query()->selectRaw('kategori as kelompok, count(*) as jumlah, sum(besaran) as total')->groupBy('kategori'),
@@ -28,7 +28,7 @@ class LaporanController extends Controller
             default => SshItem::query()->selectRaw('category_id, count(*) as jumlah, sum(harga) as total')->groupBy('category_id')->with('category'),
         };
 
-        if ($tahunId) {
+        if ($tahunId !== null) {
             $query->where('tahun_anggaran_id', $tahunId);
         }
 
@@ -37,6 +37,20 @@ class LaporanController extends Controller
             'rows' => $query->get(),
             'tahunList' => TahunAnggaran::orderByDesc('tahun')->get(),
         ]);
+    }
+
+    /**
+     * Null = tahun tidak difilter. Selain itu selalu mengembalikan angka (0 bila tahunnya tidak ada
+     * di data) supaya filternya tetap diterapkan dan rekapnya kosong — bukan diam-diam mengabaikan
+     * filter lalu menjumlahkan seluruh tahun di bawah judul satu tahun tertentu.
+     */
+    private function resolveTahunId(Request $request): ?int
+    {
+        if (! $request->filled('tahun')) {
+            return null;
+        }
+
+        return TahunAnggaran::where('tahun', $request->integer('tahun'))->value('id') ?? 0;
     }
 
     public function perubahanHarga(Request $request): View

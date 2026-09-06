@@ -93,6 +93,10 @@ basis data pengembangan. Cakupan tes difokuskan ke bagian yang paling mahal kala
   rekomendasi memakai median sehingga tahan terhadap satu penawaran nyeleneh.
 - `PemetaanKodeTest` — pemetaan Kode Aset → Rekening → SIPD: statusnya dihitung ulang dari keadaan
   data terkini (valid / belum ada rekening / duplikasi / belum dipetakan), bukan status yang basi.
+- `LaporanDashboardTest` — laporan, dashboard, dan jejak audit: filter tahun benar-benar diterapkan
+  (bukan diabaikan lalu menjumlahkan seluruh tahun di bawah judul satu tahun), angka dashboard hanya
+  menghitung data aktif dan dibatasi per OPD untuk operator, serta audit log yang mencatat nilai
+  sebelum/sesudah dan tidak punya jalur ubah/hapus sama sekali di level server.
 
 CI GitHub Actions (`.github/workflows/sishd-tests.yml`) menjalankan tes ini dengan service
 PostgreSQL setiap kali ada perubahan di `sishd/`.
