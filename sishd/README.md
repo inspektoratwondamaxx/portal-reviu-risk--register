@@ -18,6 +18,22 @@ berantai ke ASB yang variabelnya bersumber dari HSPK tersebut.
 
 ## Menjalankan Secara Lokal
 
+> **Belum pernah memasang aplikasi Laravel / bukan orang IT?** Ikuti
+> **[`docs/CARA-MENJALANKAN.md`](docs/CARA-MENJALANKAN.md)** — panduan langkah demi langkah dari nol
+> (memasang PHP, PostgreSQL, membuat basis data, sampai membuka aplikasinya di peramban).
+
+Untuk yang sudah terbiasa, siapkan dulu PHP 8.2+, Composer, PostgreSQL 16, dan Node.js, buat basis
+data beserta penggunanya, salin `.env.example` menjadi `.env` dan isi bagian `DB_*`, lalu jalankan
+skrip pemasangan:
+
+```bash
+bash setup.sh      # Linux/macOS  — setup.bat untuk Windows
+php artisan serve
+```
+
+Skrip tersebut memeriksa prasyarat, memasang komponen, menyiapkan `.env` dan kunci aplikasi,
+memigrasi + mengisi data contoh, lalu membangun tampilan. Bila lebih suka manual:
+
 ```bash
 composer install
 cp .env.example .env
