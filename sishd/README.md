@@ -46,6 +46,10 @@ npm install && npm run build   # atau `npm run dev` saat mengembangkan tampilan
 php artisan serve
 ```
 
+> **Sebelum dipakai dengan data sungguhan**, baca `docs/KAJIAN-KEAMANAN.md` bagian Rekomendasi:
+> ganti seluruh kata sandi di bawah, aktifkan HTTPS beserta `SESSION_SECURE_COOKIE=true`, dan set
+> `APP_DEBUG=false`. Tiga hal itu tidak bisa dijamin dari sisi kode.
+
 Akun demo (password semua: `password`) — data contoh untuk uji coba, bukan data riil:
 
 | Role | Email |
@@ -97,6 +101,9 @@ basis data pengembangan. Cakupan tes difokuskan ke bagian yang paling mahal kala
   (bukan diabaikan lalu menjumlahkan seluruh tahun di bawah judul satu tahun), angka dashboard hanya
   menghitung data aktif dan dibatasi per OPD untuk operator, serta audit log yang mencatat nilai
   sebelum/sesudah dan tidak punya jalur ubah/hapus sama sekali di level server.
+- `KeamananTest` — pemagar temuan review keamanan: unggahan SVG/HTML/PHP ditolak sebagai bukti
+  survei, percobaan login dibatasi 5 per menit, sistem selalu menyisakan satu Super Admin aktif,
+  dan header keamanan terpasang di seluruh respons.
 
 CI GitHub Actions (`.github/workflows/sishd-tests.yml`) menjalankan tes ini dengan service
 PostgreSQL setiap kali ada perubahan di `sishd/`.
@@ -110,6 +117,7 @@ Untuk keperluan serah terima/administrasi, tersedia dokumen pengujian di `docs/`
 | `docs/RENCANA-DAN-KASUS-UJI.md` | Rencana pengujian + 75 kasus uji otomatis (Modul A–I) dan kasus uji manual untuk UAT (Modul H, J–L), lengkap dengan langkah dan data uji konkret |
 | `docs/LAPORAN-HASIL-PENGUJIAN.md` | Laporan hasil pengujian: statistik per modul, daftar temuan beserta tingkat keparahan, risiko, dan rekomendasi |
 | `docs/BERITA-ACARA-UAT.md` | Templat Berita Acara UAT — seluruh kolom nama, nomor, tanggal, dan tanda tangan berupa isian kosong untuk dilengkapi instansi |
+| `docs/KAJIAN-KEAMANAN.md` | Kajian keamanan (OWASP Top 10): kategori yang diperiksa & dinyatakan aman, 5 temuan beserta skenario eksploitasi dan perbaikannya, checklist hardening pra-deploy, serta rencana tindak lanjut |
 
 ## Yang Membuatnya "Dinamis" (bukan hard-coded)
 

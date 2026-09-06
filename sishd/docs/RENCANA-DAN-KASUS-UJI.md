@@ -24,6 +24,7 @@ Pengujian mencakup modul-modul berikut:
 | J | Survei Harga | Perekaman survei lapangan, bukti digital, rekap statistik harga |
 | K | Pemetaan Kode | Kode Aset → Kode Rekening → Kode SIPD beserta status validasinya |
 | M | Laporan, Dashboard & Jejak Audit | Rekap per jenis, laporan perubahan harga, angka dashboard, audit log |
+| N | Keamanan | Unggahan berkas, pembatasan percobaan login, penjagaan akun Super Admin, header keamanan |
 
 **Di luar cakupan**: pengujian beban/kinerja (load testing), pengujian penetrasi keamanan mendalam,
 dan pengujian kompatibilitas lintas peramban. Ketiganya disarankan sebagai kegiatan terpisah.
@@ -311,6 +312,27 @@ Berkas: `tests/Feature/LaporanDashboardTest.php`
 | M-17 | Operator & Pimpinan tidak bisa membuka laporan | 1. Login sebagai operator/Pimpinan 2. Buka rekap dan perubahan harga | — | Seluruhnya ditolak (403) | Lulus |
 | M-18 | Hanya Super Admin yang bisa membuka jejak audit | 1. Login sebagai Admin SSH/Verifikator/Operator/Pimpinan 2. Buka Audit Log | — | Seluruhnya ditolak (403) | Lulus |
 | M-19 | Tamu tidak bisa membuka laporan maupun dashboard | 1. Tanpa login, buka Dashboard, Perubahan Harga, dan Audit Log | — | Ketiganya dialihkan ke `/login` | Lulus |
+
+
+## Modul N — Keamanan
+
+Berkas: `tests/Feature/KeamananTest.php`. Latar belakang tiap kasus ada di `docs/KAJIAN-KEAMANAN.md`.
+
+| ID | Skenario | Langkah Pengujian | Data Uji | Hasil Diharapkan | Status |
+|---|---|---|---|---|---|
+| N-01 | Bukti survei berformat SVG ditolak | 1. Unggah bukti survei berupa `.svg` berisi tag `<script>` | SVG bermuatan skrip | Ditolak validasi; tidak ada bukti tersimpan | Lulus |
+| N-02 | Bukti survei berformat HTML/PHP ditolak | 1. Unggah `.html` dan `.php` sebagai bukti | 2 berkas skrip | Keduanya ditolak validasi | Lulus |
+| N-03 | Foto biasa tetap dapat diunggah | 1. Unggah foto `.jpg` sebagai bukti | Foto toko | Tersimpan normal — perbaikan tidak menutup jalur yang dibutuhkan petugas | Lulus |
+| N-04 | Percobaan login berulang diblokir | 1. Kirim 5 percobaan kata sandi salah 2. Kirim percobaan ke-6 | Email Super Admin, kata sandi asal | Percobaan ke-6 ditolak (HTTP 429); pengguna tetap belum login | Lulus |
+| N-05 | Super Admin terakhir tidak bisa menurunkan role sendiri | 1. Login sebagai satu-satunya Super Admin 2. Ubah role sendiri menjadi Pimpinan | Role tujuan: Pimpinan | Ditolak dengan pesan jelas; role tidak berubah | Lulus |
+| N-06 | Super Admin terakhir tidak bisa menonaktifkan akunnya | 1. Login sebagai satu-satunya Super Admin 2. Nonaktifkan akun sendiri | `is_active = 0` | Ditolak; akun tetap aktif | Lulus |
+| N-07 | Penurunan role diizinkan bila ada Super Admin lain | 1. Angkat satu Super Admin cadangan 2. Turunkan role diri sendiri | 2 Super Admin aktif | Berhasil — penjagaan tidak berlebihan | Lulus |
+| N-08 | Super Admin terakhir tidak bisa dihapus | 1. Hapus akun Super Admin sampai tersisa satu | 2 Super Admin | Sistem selalu menyisakan minimal satu Super Admin | Lulus |
+| N-09 | Header keamanan dasar terpasang | 1. Buka situs publik 2. Periksa header respons | — | `X-Frame-Options: SAMEORIGIN`, `X-Content-Type-Options: nosniff`, `Referrer-Policy: same-origin` | Lulus |
+| N-10 | Header keamanan ikut pada halaman back office | 1. Login 2. Buka Dashboard 3. Periksa header | — | `X-Frame-Options: SAMEORIGIN` ikut terpasang | Lulus |
+| N-11 | Kata sandi tersimpan dalam bentuk hash | 1. Tambah pengguna baru lewat menu Sistem 2. Periksa kolom `password` | Kata sandi "kata-sandi-uji-123" | Nilai tersimpan bukan teks asli, dan cocok saat diverifikasi hash | Lulus |
+| N-12 | API publik tidak membocorkan kolom internal | 1. Panggil `GET /api/v1/ssh` 2. Periksa seluruh kunci pada tiap baris | Data SSH aktif | Tidak ada `id`, `created_by`, `updated_by`, `opd_id`, `is_active` | Lulus |
+| N-13 | Pesan login gagal tidak membocorkan email terdaftar | 1. Login gagal dengan email terdaftar 2. Login gagal dengan email tak terdaftar | 2 email berbeda | Pesan galat kedua kasus sama persis | Lulus |
 
 
 # BAGIAN II — KASUS UJI MANUAL (UAT)

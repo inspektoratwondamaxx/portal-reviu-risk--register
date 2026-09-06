@@ -36,7 +36,9 @@ Route::get('/ssh/{ssh}', [BerandaController::class, 'detailSsh'])->name('publik.
 Route::get('/hspk/{hspk}', [BerandaController::class, 'detailHspk'])->name('publik.hspk.show');
 
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-Route::post('/login', [AuthController::class, 'login'])->name('login.attempt');
+// throttle:5,1 = maksimal 5 percobaan gagal per menit per IP. Tanpa ini, kata sandi akun mana pun
+// bisa ditebak tanpa batas dari luar — dan akun contoh bawaan sistem memakai kata sandi yang lemah.
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,1')->name('login.attempt');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 /*

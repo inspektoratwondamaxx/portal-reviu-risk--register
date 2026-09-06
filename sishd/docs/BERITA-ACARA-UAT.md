@@ -54,7 +54,7 @@ Rincian langkah tiap skenario merujuk dokumen `Rencana dan Kasus Uji — SISHD`.
 
 ### 4.1 Modul Terverifikasi Otomatis
 
-Modul berikut telah diverifikasi melalui 148 kasus uji otomatis dengan hasil seluruhnya lulus.
+Modul berikut telah diverifikasi melalui 161 kasus uji otomatis dengan hasil seluruhnya lulus.
 Pengujian pada sesi UAT bersifat konfirmasi oleh perwakilan pengguna.
 
 | No | Modul / Fitur | Skenario Diuji | Hasil | Catatan |
@@ -75,6 +75,7 @@ Pengujian pada sesi UAT bersifat konfirmasi oleh perwakilan pengguna.
 | 14 | Pemetaan Kode | Status pemetaan Kode Aset → Rekening → SIPD | | |
 | 15 | Laporan & Dashboard | Rekap per jenis, laporan perubahan harga, angka ringkasan dashboard | | |
 | 16 | Jejak Audit | Pencatatan pelaku, nilai sebelum & sesudah; audit log hanya dapat dibaca | | |
+| 17 | Keamanan | Pembatasan percobaan login, penolakan unggahan berbahaya, header keamanan | | |
 
 ### 4.2 Modul Diuji Manual pada Sesi Ini
 
@@ -82,18 +83,18 @@ Butir berikut menuntut penilaian manusia sehingga tidak dapat digantikan penguji
 
 | No | Modul / Fitur | Skenario Diuji | Hasil | Catatan |
 |---|---|---|---|---|
-| 17 | Master Data | Item nonaktif tidak lagi muncul di situs publik | | |
-| 18 | Master Data | Pencarian & filter daftar master terasa benar bagi petugas | | |
-| 19 | Import Excel | Unggah berkas selain Excel ditolak dengan pesan yang jelas | | |
-| 20 | Export SIPD | Susunan kolom sesuai templat SIPD yang berlaku di instansi | | |
-| 21 | Survei Harga | Unggah bukti langsung dari kamera ponsel | | |
-| 22 | Survei Harga | Angka rekomendasi (median) dipahami dan disetujui petugas | | |
-| 23 | Pemetaan Kode | Penandaan pemetaan bermasalah mudah dibaca dan ditindaklanjuti | | |
-| 24 | Laporan | Susunan & tampilan cetak memadai sebagai lampiran dokumen instansi | | |
-| 25 | Dashboard | Informasi yang ditampilkan sesuai kebutuhan pemantauan pimpinan | | |
-| 26 | Antarmuka | Tampilan pada perangkat ponsel | | |
-| 27 | Antarmuka | Istilah sesuai kebiasaan instansi | | |
-| 28 | Antarmuka | Pesan galat mudah dipahami | | |
+| 18 | Master Data | Item nonaktif tidak lagi muncul di situs publik | | |
+| 19 | Master Data | Pencarian & filter daftar master terasa benar bagi petugas | | |
+| 20 | Import Excel | Unggah berkas selain Excel ditolak dengan pesan yang jelas | | |
+| 21 | Export SIPD | Susunan kolom sesuai templat SIPD yang berlaku di instansi | | |
+| 22 | Survei Harga | Unggah bukti langsung dari kamera ponsel | | |
+| 23 | Survei Harga | Angka rekomendasi (median) dipahami dan disetujui petugas | | |
+| 24 | Pemetaan Kode | Penandaan pemetaan bermasalah mudah dibaca dan ditindaklanjuti | | |
+| 25 | Laporan | Susunan & tampilan cetak memadai sebagai lampiran dokumen instansi | | |
+| 26 | Dashboard | Informasi yang ditampilkan sesuai kebutuhan pemantauan pimpinan | | |
+| 27 | Antarmuka | Tampilan pada perangkat ponsel | | |
+| 28 | Antarmuka | Istilah sesuai kebiasaan instansi | | |
+| 29 | Antarmuka | Pesan galat mudah dipahami | | |
 
 ### 4.3 Rekapitulasi
 

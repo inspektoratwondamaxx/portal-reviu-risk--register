@@ -60,7 +60,11 @@ class PriceSurveyController extends Controller
             'tanggal_survei' => ['required', 'date'],
             'harga' => ['required', 'numeric', 'min:0'],
             'keterangan' => ['nullable', 'string'],
-            'bukti.*' => ['nullable', 'image', 'max:4096'],
+            // Sengaja menyebut format satu per satu, bukan aturan 'image' bawaan Laravel: aturan itu
+            // ikut menerima SVG, sedangkan SVG adalah dokumen XML yang boleh memuat <script>. Berkas
+            // bukti dibuka lewat tautan ke domain aplikasi sendiri, sehingga satu SVG bermuatan
+            // skrip yang diunggah operator akan berjalan dengan sesi milik admin yang membukanya.
+            'bukti.*' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
             'jenis_bukti' => ['nullable', 'in:foto_toko,foto_daftar_harga,dokumen_penawaran,lainnya'],
         ]);
 

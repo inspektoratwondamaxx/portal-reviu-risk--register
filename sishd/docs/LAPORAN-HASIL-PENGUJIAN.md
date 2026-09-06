@@ -10,8 +10,8 @@
 
 ## 1. Ringkasan Eksekutif
 
-Pengujian otomatis atas 148 kasus uji pada dua belas modul SISHD dijalankan dan **seluruhnya lulus
-(100%)** dengan 465 titik pemeriksaan (assertion), tanpa kegagalan tersisa. Dengan siklus ini
+Pengujian otomatis atas 161 kasus uji pada tiga belas modul SISHD dijalankan dan **seluruhnya lulus
+(100%)** dengan 507 titik pemeriksaan (assertion), tanpa kegagalan tersisa. Dengan siklus ini
 **seluruh modul fungsional sistem telah tercakup pengujian otomatis** — tidak ada lagi modul yang
 sepenuhnya bergantung pada pengujian manual. Cakupannya meliputi batas akses antar-OPD dan
 antar-role, rantai persetujuan berjenjang, pemetaan data usulan ke data induk, kaskade perhitungan
@@ -19,7 +19,11 @@ harga, evaluasi formula ASB, import/export Excel sebagai satu-satunya jalur yang
 dari luar sistem, CRUD master data, survei harga, pemetaan kode, serta laporan, angka dashboard,
 dan jejak audit.
 
-Selama seluruh siklus pengujian ditemukan **10 cacat**, seluruhnya telah diperbaiki dan
+Selain itu dilakukan **review keamanan tersendiri** (OWASP Top 10) yang menemukan 5 celah,
+seluruhnya sudah diperbaiki dan dipagari kasus uji — rinciannya pada dokumen
+`docs/KAJIAN-KEAMANAN.md`.
+
+Selama seluruh siklus pengujian ditemukan **10 cacat fungsional**, seluruhnya telah diperbaiki dan
 diverifikasi ulang. Empat di antaranya berkategori Tinggi dan tidak terlihat melalui pemakaian
 normal lewat peramban — semuanya baru terungkap justru karena pengujian otomatis dan pengujian
 batas dijalankan. Satu di antaranya (T-05) bahkan bersifat **acak**: baris yang gagal
@@ -57,7 +61,7 @@ data induk setelah seluruh tahap persetujuan terlampaui.
 | Basis data pengujian | `sishd_test` (terpisah dari basis data pengembangan) |
 | Alat uji | PHPUnit via `php artisan test` |
 | Otomasi berkelanjutan | GitHub Actions (`.github/workflows/sishd-tests.yml`) |
-| Waktu eksekusi | ± 15 detik untuk seluruh rangkaian |
+| Waktu eksekusi | ± 17 detik untuk seluruh rangkaian |
 
 ## 3. Ringkasan Statistik
 
@@ -75,7 +79,8 @@ data induk setelah seluruh tahap persetujuan terlampaui.
 | J | Survei Harga | 19 | 19 | 0 | 0 | 100% |
 | K | Pemetaan Kode | 15 | 15 | 0 | 0 | 100% |
 | M | Laporan, Dashboard & Jejak Audit | 19 | 19 | 0 | 0 | 100% |
-| **Total otomatis** | | **148** | **148** | **0** | **0** | **100%** |
+| N | Keamanan | 13 | 13 | 0 | 0 | 100% |
+| **Total otomatis** | | **161** | **161** | **0** | **0** | **100%** |
 | Sisa manual (UAT) | Keterbacaan laporan, tampilan ponsel, istilah, format SIPD | 12 | – | – | 12 | Menunggu UAT |
 
 ## 4. Daftar Temuan
