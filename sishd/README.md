@@ -115,7 +115,7 @@ Untuk keperluan serah terima/administrasi, tersedia dokumen pengujian di `docs/`
 | Dokumen | Isi |
 |---|---|
 | `docs/RENCANA-DAN-KASUS-UJI.md` | Rencana pengujian + 75 kasus uji otomatis (Modul A–I) dan kasus uji manual untuk UAT (Modul H, J–L), lengkap dengan langkah dan data uji konkret |
-| `docs/LAPORAN-HASIL-PENGUJIAN.md` | Laporan hasil pengujian: statistik per modul, daftar temuan beserta tingkat keparahan, risiko, dan rekomendasi |
+| `docs/LAPORAN-HASIL-PENGUJIAN.md` | Laporan Hasil Pengujian dalam susunan naskah dinas (Bab I–VII, berikut blok tanda tangan): metodologi, rekapitulasi per modul, daftar temuan fungsional & keamanan beserta tingkat keparahan, risiko yang masih ada, simpulan, dan rekomendasi |
 | `docs/BERITA-ACARA-UAT.md` | Templat Berita Acara UAT — seluruh kolom nama, nomor, tanggal, dan tanda tangan berupa isian kosong untuk dilengkapi instansi |
 | `docs/KAJIAN-KEAMANAN.md` | Kajian keamanan (OWASP Top 10): kategori yang diperiksa & dinyatakan aman, 5 temuan beserta skenario eksploitasi dan perbaikannya, checklist hardening pra-deploy, serta rencana tindak lanjut |
 
