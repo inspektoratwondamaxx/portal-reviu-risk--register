@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<style>
+:root{--p:#0b5394;--p2:#073763;--bg:#f2f5f9;--c:#fff;--t:#1d2733;--m:#6b7785;--ok:#2e7d32;--warn:#e69138;--err:#c62828;--bd:#dde3ea}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--t);padding-bottom:78px}
+header{background:linear-gradient(135deg,var(--p),var(--p2));color:#fff;padding:14px 16px;position:sticky;top:0;z-index:5}
+header h1{margin:0;font-size:17px}header small{opacity:.85}
+main{padding:14px;max-width:720px;margin:auto}
+.card{background:var(--c);border-radius:14px;padding:14px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat b{font-size:26px;display:block;color:var(--p)}.stat span{font-size:12px;color:var(--m)}
+label{font-size:12px;color:var(--m);display:block;margin:10px 0 4px;font-weight:600}
+input,select,textarea{width:100%;padding:11px;border:1px solid var(--bd);border-radius:10px;font:inherit;background:#fff}
+textarea{min-height:130px}
+button{font:inherit;border:0;border-radius:10px;padding:12px 16px;background:var(--p);color:#fff;font-weight:600;cursor:pointer}
+button.sec{background:#e7eef6;color:var(--p)}button.dng{background:var(--err)}button:disabled{opacity:.5}
+.big{width:100%;padding:16px;font-size:16px}
+nav{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--bd);display:flex;padding-bottom:env(safe-area-inset-bottom);z-index:6}
+nav button{flex:1;background:none;color:var(--m);border-radius:0;padding:10px 4px;font-size:11px}
+nav button.on{color:var(--p)}nav button span{display:block;font-size:20px}
+.view{display:none}.view.on{display:block}
+.item{padding:12px;border-bottom:1px solid var(--bd);cursor:pointer}.item:last-child{border:0}
+.item b{display:block;font-size:14px}.item small{color:var(--m)}
+.badge{display:inline-block;padding:2px 8px;border-radius:99px;font-size:11px;background:#e7eef6;color:var(--p);margin-right:4px}
+.badge.Baru{background:#fff3e0;color:var(--warn)}.badge.Selesai{background:#e8f5e9;color:var(--ok)}
+.thumbs{display:flex;gap:8px;overflow-x:auto;margin:10px 0}.thumbs img{height:90px;border-radius:8px;border:1px solid var(--bd)}
+#toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:99px;display:none;z-index:9;max-width:90%;font-size:13px}
+.load{position:fixed;inset:0;background:rgba(255,255,255,.85);display:none;align-items:center;justify-content:center;z-index:10;font-weight:600;flex-direction:column;gap:10px}
+.spin{width:36px;height:36px;border:4px solid var(--bd);border-top-color:var(--p);border-radius:50%;animation:s 1s linear infinite}@keyframes s{to{transform:rotate(360deg)}}
+.row{display:flex;gap:8px}.row>*{flex:1}
+a.lnk{color:var(--p);font-size:13px;display:inline-block;margin:2px 8px 2px 0}
+</style>
+</head>
+<body>
+<header><h1>📁 Arsip &amp; Scan Kantor</h1><small id="who">memuat…</small></header>
+<main>
+
+<section id="v-home" class="view on">
+  <div class="grid">
+    <div class="card stat"><b id="sTotal">0</b><span>Total Dokumen</span></div>
+    <div class="card stat"><b id="sBulan">0</b><span>Diinput Bulan Ini</span></div>
+  </div>
+  <div class="card"><b>Ringkasan</b><div id="sRinci" style="margin-top:8px;font-size:13px"></div></div>
+  <button class="big" onclick="go('scan')">📷 Scan Dokumen Baru</button>
+</section>
+
+<section id="v-scan" class="view">
+  <div class="card">
+    <b>1. Ambil foto dokumen</b>
+    <p style="font-size:12px;color:var(--m)">Posisikan dokumen di permukaan rata, cahaya cukup, tegak lurus. Maks. 5 halaman.</p>
+    <input type="file" id="cam" accept="image/*" capture="environment" hidden>
+    <input type="file" id="gal" accept="image/*" multiple hidden>
+    <div class="row">
+      <button onclick="cam.click()">📷 Kamera</button>
+      <button class="sec" onclick="gal.click()">🖼️ Galeri</button>
+    </div>
+    <div class="thumbs" id="thumbs"></div>
+    <div class="row">
+      <button class="sec" onclick="resetScan()">Ulangi</button>
+      <button id="btnOcr" onclick="doScan()" disabled>🔍 Baca Dokumen</button>
+    </div>
+  </div>
+  <div class="card" id="formCard" style="display:none">
+    <b>2. Periksa &amp; simpan</b>
+    <p style="font-size:12px;color:var(--m)">Hasil bacaan otomatis — koreksi bila perlu sebelum disimpan.</p>
+    <form id="frm" onsubmit="return simpan(event)">
+      <label>Jenis Dokumen</label><select id="fJenis"></select>
+      <label>Nomor</label><input id="fNomor">
+      <label>Tanggal Dokumen</label><input id="fTgl" type="date">
+      <label>Pengirim / Tujuan</label><input id="fPengirim">
+      <label>Perihal</label><input id="fPerihal">
+      <label>Status</label><select id="fStatus"></select>
+      <label>Teks Hasil OCR</label><textarea id="fIsi"></textarea>
+      <br><button class="big" type="submit">💾 Simpan ke Database</button>
+    </form>
+  </div>
+</section>
+
+<section id="v-list" class="view">
+  <div class="card">
+    <input id="qKata" placeholder="🔎 Cari nomor / perihal / isi dokumen" oninput="debounceList()">
+    <div class="row" style="margin-top:8px"><select id="qJenis" onchange="loadList()"></select><select id="qStatus" onchange="loadList()"></select></div>
+  </div>
+  <div class="card" id="listBox"></div>
+</section>
+
+<section id="v-detail" class="view">
+  <div class="card" id="detBox"></div>
+  <button class="sec big" onclick="go('list')">← Kembali</button>
+</section>
+
+<section id="v-user" class="view">
+  <div class="card">
+    <b>Tambah / Ubah Pengguna</b>
+    <label>Email Google</label><input id="uEmail" type="email">
+    <label>Nama</label><input id="uNama">
+    <label>Role</label><select id="uRole"><option>Staf</option><option>Admin</option></select><br>
+    <button class="big" onclick="addUser()">Simpan Pengguna</button>
+  </div>
+  <div class="card" id="userBox"></div>
+</section>
+</main>
+
+<nav>
+  <button id="n-home" class="on" onclick="go('home')"><span>🏠</span>Beranda</button>
+  <button id="n-scan" onclick="go('scan')"><span>📷</span>Scan</button>
+  <button id="n-list" onclick="go('list')"><span>🗂️</span>Arsip</button>
+  <button id="n-user" onclick="go('user')" style="display:none"><span>👥</span>Pengguna</button>
+</nav>
+<div id="toast"></div>
+<div class="load" id="load"><div class="spin"></div><div id="loadTxt">Memproses…</div></div>
+
+<script>
+var S={user:null,pages:[],urls:[],editId:null},cam=document.getElementById('cam'),gal=document.getElementById('gal');
+var $=function(i){return document.getElementById(i)};
+function esc(s){var d=document.createElement('div');d.textContent=s==null?'':s;return d.innerHTML}
+function toast(m){var t=$('toast');t.textContent=m;t.style.display='block';clearTimeout(t._h);t._h=setTimeout(function(){t.style.display='none'},3500)}
+function busy(on,txt){$('load').style.display=on?'flex':'none';if(txt)$('loadTxt').textContent=txt}
+function run(fn,ok,args,txt){busy(true,txt);var r=google.script.run.withSuccessHandler(function(x){busy(false);ok&&ok(x)}).withFailureHandler(function(e){busy(false);toast(e.message||e)});r[fn].apply(r,args||[])}
+
+function go(v){
+  ['home','scan','list','detail','user'].forEach(function(x){$('v-'+x).classList.toggle('on',x===v);var n=$('n-'+x);n&&n.classList.toggle('on',x===v)});
+  if(v==='home')loadHome();if(v==='list')loadList();if(v==='user')loadUsers();window.scrollTo(0,0)
+}
+function opt(sel,arr,all){sel.innerHTML=(all?'<option value="">'+all+'</option>':'')+arr.map(function(a){return '<option>'+esc(a)+'</option>'}).join('')}
+
+/* ---------- Mulai ---------- */
+run('api_bootstrap',function(b){
+  S.user=b.user;$('who').textContent=b.user.nama+' • '+b.user.role;
+  opt($('fJenis'),b.jenis);opt($('fStatus'),b.status);opt($('qJenis'),b.jenis,'Semua jenis');opt($('qStatus'),b.status,'Semua status');
+  if(b.user.role==='Admin')$('n-user').style.display='';
+  renderStats(b.stats)
+});
+function loadHome(){run('api_bootstrap',function(b){renderStats(b.stats)})}
+function renderStats(s){
+  $('sTotal').textContent=s.total;$('sBulan').textContent=s.bulanIni;
+  var h='';Object.keys(s.perJenis).forEach(function(k){h+='<div>'+esc(k)+': <b>'+s.perJenis[k]+'</b></div>'});
+  Object.keys(s.perStatus).forEach(function(k){h+='<span class="badge '+esc(k)+'">'+esc(k)+': '+s.perStatus[k]+'</span>'});
+  $('sRinci').innerHTML=h||'Belum ada data.'
+}
+
+/* ---------- Kamera & kompresi ---------- */
+cam.onchange=gal.onchange=function(e){
+  var files=[].slice.call(e.target.files);e.target.value='';
+  files.forEach(function(f){
+    if(S.pages.length>=5){toast('Maksimal 5 halaman');return}
+    shrink(f,1700,.82,function(data){S.pages.push(data);drawThumbs()})
+  })
+};
+function shrink(file,max,q,cb){
+  var img=new Image(),u=URL.createObjectURL(file);
+  img.onload=function(){
+    var k=Math.min(1,max/Math.max(img.width,img.height)),c=document.createElement('canvas');
+    c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);
+    var g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,c.width,c.height);g.drawImage(img,0,0,c.width,c.height);
+    URL.revokeObjectURL(u);cb(c.toDataURL('image/jpeg',q))
+  };
+  img.onerror=function(){toast('Gambar tidak dapat dibaca')};img.src=u
+}
+function drawThumbs(){
+  $('thumbs').innerHTML=S.pages.map(function(p){return '<img src="'+p+'">'}).join('');
+  $('btnOcr').disabled=!S.pages.length
+}
+function resetScan(){S.pages=[];S.urls=[];S.editId=null;drawThumbs();$('formCard').style.display='none';$('frm').reset()}
+
+/* ---------- OCR ---------- */
+function doScan(){
+  run('api_scan',function(r){
+    S.urls=r.urls;var f=r.fields;
+    $('fJenis').value=f.jenis;$('fNomor').value=f.nomor;$('fTgl').value=f.tglDokumen;
+    $('fPengirim').value=f.pengirim;$('fPerihal').value=f.perihal;$('fIsi').value=r.text;$('fStatus').value='Baru';
+    $('formCard').style.display='block';$('formCard').scrollIntoView({behavior:'smooth'});
+    toast(r.text?'Dokumen terbaca. Silakan periksa data.':'Teks tidak terbaca, isi manual atau foto ulang.')
+  },[S.pages.map(function(p){return {data:p}})],'Membaca dokumen (OCR)… ±10–30 detik')
+}
+function simpan(e){
+  e.preventDefault();
+  var rec={id:S.editId,jenis:$('fJenis').value,nomor:$('fNomor').value,tglDokumen:$('fTgl').value,pengirim:$('fPengirim').value,
+    perihal:$('fPerihal').value,status:$('fStatus').value,isi:$('fIsi').value,urls:S.urls};
+  run('api_save',function(r){toast('Tersimpan: '+r.id);resetScan();go('list')},[rec],'Menyimpan…');return false
+}
+
+/* ---------- Arsip ---------- */
+var _t;function debounceList(){clearTimeout(_t);_t=setTimeout(loadList,400)}
+function loadList(){
+  google.script.run.withSuccessHandler(function(a){
+    $('listBox').innerHTML=a.length?a.map(function(d){
+      return '<div class="item" onclick="detail(\''+esc(d.id)+'\')"><b>'+esc(d.perihal||d.nomor||d.id)+'</b>'+
+      '<span class="badge">'+esc(d.jenis)+'</span><span class="badge '+esc(d.status)+'">'+esc(d.status)+'</span>'+
+      '<small>'+esc(d.nomor)+' • '+esc(d.tglDokumen||d.tglInput)+'</small></div>'}).join(''):'Tidak ada dokumen.'
+  }).withFailureHandler(function(e){toast(e.message)}).api_list({kata:$('qKata').value,jenis:$('qJenis').value,status:$('qStatus').value})
+}
+function detail(id){
+  run('api_get',function(d){
+    S.cur=d;
+    $('detBox').innerHTML='<b>'+esc(d.perihal||d.id)+'</b><br><small>'+esc(d.id)+' • diinput '+esc(d.tglInput)+' oleh '+esc(d.petugas)+'</small>'+
+    '<p><span class="badge">'+esc(d.jenis)+'</span><span class="badge '+esc(d.status)+'">'+esc(d.status)+'</span></p>'+
+    '<div><b>Nomor:</b> '+esc(d.nomor)+'<br><b>Tanggal:</b> '+esc(d.tglDokumen)+'<br><b>Pengirim/Tujuan:</b> '+esc(d.pengirim)+'</div>'+
+    '<div style="margin:8px 0">'+d.urls.map(function(u,i){return '<a class="lnk" target="_blank" rel="noopener" href="'+esc(u)+'">📄 Halaman '+(i+1)+'</a>'}).join('')+'</div>'+
+    '<label>Status</label><select id="dStatus">'+['Baru','Diproses','Selesai'].map(function(s){return '<option'+(s===d.status?' selected':'')+'>'+s+'</option>'}).join('')+'</select>'+
+    '<label>Isi (OCR)</label><div style="white-space:pre-wrap;font-size:12px;max-height:220px;overflow:auto;background:#f7f9fb;padding:8px;border-radius:8px">'+esc(d.isi)+'</div><br>'+
+    '<div class="row"><button onclick="ubahStatus()">Simpan Status</button>'+(S.user.role==='Admin'?'<button class="dng" onclick="hapus()">Hapus</button>':'')+'</div>';
+    go('detail')
+  },[id])
+}
+function ubahStatus(){var d=S.cur;d.status=$('dStatus').value;d.urls=d.urls;
+  run('api_save',function(){toast('Status diperbarui');go('list')},[d])}
+function hapus(){if(confirm('Hapus dokumen ini secara permanen?'))run('api_delete',function(){toast('Dihapus');go('list')},[S.cur.id])}
+
+/* ---------- Pengguna ---------- */
+function loadUsers(){google.script.run.withSuccessHandler(function(a){
+  $('userBox').innerHTML=a.map(function(u){return '<div class="item"><b>'+esc(u.nama)+'</b><small>'+esc(u.email)+' • '+esc(u.role)+'</small></div>'}).join('')
+}).withFailureHandler(function(e){toast(e.message)}).api_users()}
+function addUser(){run('api_addUser',function(){toast('Pengguna disimpan');$('uEmail').value=$('uNama').value='';loadUsers()},[$('uEmail').value,$('uNama').value,$('uRole').value])}
+</script>
+</body>
+</html>
