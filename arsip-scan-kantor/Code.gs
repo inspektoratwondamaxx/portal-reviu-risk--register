@@ -63,6 +63,16 @@ function ensureSheet_(ss, name, head) {
   return sh;
 }
 
+/** Jalankan SEKALI dari editor (oleh pemilik) untuk memberi semua izin yang dibutuhkan. */
+function otorisasi() {
+  DriveApp.getRootFolder();
+  DocumentApp.create('tes-izin').getId();
+  DriveApp.getFilesByName('tes-izin').next().setTrashed(true);
+  SpreadsheetApp.getActiveSpreadsheet;
+  Drive.About.get();
+  Logger.log('Semua izin OK. Sekarang buat versi deployment baru.');
+}
+
 /* ========== AKSES & PENGGUNA ========== */
 function ss_() {
   var id = PropertiesService.getScriptProperties().getProperty('SS_ID');
@@ -126,7 +136,9 @@ function api_scan(pages) {
   var u = currentUser_();
   if (!pages || !pages.length) throw new Error('Tidak ada gambar.');
   if (pages.length > MAX_PAGES) throw new Error('Maksimal ' + MAX_PAGES + ' halaman per dokumen.');
-  var folder = DriveApp.getFolderById(PropertiesService.getScriptProperties().getProperty('FOLDER_ID'));
+  var folder = step_('Folder arsip Drive', function () {
+    return DriveApp.getFolderById(PropertiesService.getScriptProperties().getProperty('FOLDER_ID'));
+  });
   var text = [], urls = [];
   var stamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyyMMdd-HHmmss');
 
@@ -134,7 +146,7 @@ function api_scan(pages) {
     var bytes = Utilities.base64Decode(String(p.data).replace(/^data:image\/\w+;base64,/, ''));
     if (bytes.length > 8 * 1024 * 1024) throw new Error('Ukuran gambar terlalu besar.');
     var blob = Utilities.newBlob(bytes, 'image/jpeg', 'scan-' + stamp + '-h' + (i + 1) + '.jpg');
-    var file = folder.createFile(blob);
+    var file = step_('Simpan berkas ke folder (pastikan Anda Editor folder)', function () { return folder.createFile(blob); });
     urls.push(file.getUrl());
     text.push(ocr_(blob));
   });
@@ -144,13 +156,21 @@ function api_scan(pages) {
   return { text: full, urls: urls, fields: extractFields_(full) };
 }
 
+function step_(nama, fn) {
+  try { return fn(); } catch (e) { throw new Error('[' + nama + '] ' + e.message); }
+}
+
 function ocr_(blob) {
   var tmp = null;
   try {
-    tmp = Drive.Files.insert(
-      { title: 'tmp-ocr-' + Date.now(), mimeType: blob.getContentType() },
-      blob, { ocr: true, ocrLanguage: 'id', convert: true });
-    return DocumentApp.openById(tmp.id).getBody().getText();
+    tmp = step_('OCR Drive API (aktifkan Services > Drive API v2)', function () {
+      return Drive.Files.insert(
+        { title: 'tmp-ocr-' + Date.now(), mimeType: blob.getContentType() },
+        blob, { ocr: true, ocrLanguage: 'id', convert: true });
+    });
+    return step_('Baca hasil OCR (izin Google Docs)', function () {
+      return DocumentApp.openById(tmp.id).getBody().getText();
+    });
   } finally {
     if (tmp && tmp.id) { try { DriveApp.getFileById(tmp.id).setTrashed(true); } catch (e) {} }
   }
